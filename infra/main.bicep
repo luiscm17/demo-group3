@@ -20,22 +20,22 @@ param skuSearch string = 'standard'
 
 // Generative Model Service
 @description('Model deployment name.')
-param modelDeploymentName string = 'grok-3-dev'
+param modelDeploymentName string = 'gpt-4.1m-dev'
 
 @description('Model name.')
-param modelName string = 'grok-3'
+param modelName string = 'gpt-4.1-mini'
 
 @description('Model format.')
-param modelFormat string = 'xAI'
+param modelFormat string = 'OpenAI'
 
 @description('Model version.')
-param modelVersion string = '1'
+param modelVersion string = '2025-04-14'
 
 @description('The name of RAI policy.')
 param raiPolicyName string = 'Microsoft.DefaultV2'
 
 @description('SKU Generative Model capacity.')
-param skuCapacity int = 10
+param skuCapacity int = 100
 
 // Embedding Model Service
 @description('Embedding Model Deployment.')
@@ -115,6 +115,9 @@ module embeddingModelModule 'modules/embedding-model.bicep' = {
     skuCapacityEmbedding: skuCapacityEmbedding
     skuNameEmbedding: skuNameEmbedding
   }
+  dependsOn: [
+    generativeModelModule
+  ]
 }
 
 module aiSearchModule 'modules/ai-search.bicep' = {
