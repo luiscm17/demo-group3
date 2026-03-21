@@ -1,65 +1,57 @@
-"""Azure AI Project provider for agent creation.
+"""Azure OpenAI provider for agent-like completions.
 
-Provides integration with Azure AI Foundry's agent framework,
-enabling creation and management of AI agents.
+Replaces the AzureAIProjectAgentProvider with a direct AsyncAzureOpenAI
+client backed by the AI Foundry endpoint. Each agent is a lightweight
+wrapper that sends a system prompt + user message and returns a response
+with a .text attribute, matching the original agent interface.
 """
 
-import os
-from typing import Any
-from agent_framework.azure import AzureAIProjectAgentProvider
-from azure.ai.projects.aio import AIProjectClient
-from azure.ai.projects.models import PromptAgentDefinition
-from azure.identity.aio import AzureCliCredential
-from src.config.settings import AgentSettings
+from openai import AsyncAzureOpenAI
+from src.config.settings import OpenAISettings
+
+
+class _AgentResponse:
+    """Wraps a chat completion so callers can do result.text."""
+
+    def __init__(self, text: str):
+        self.text = text
+
+    def __str__(self) -> str:
+        return self.text
+
+
+class _SimpleAgent:
+    """Sends system+user messages to Azure OpenAI and returns _AgentResponse."""
+
+    def __init__(self, instructions: str):
+        self._instructions = instructions
+        self._client = AsyncAzureOpenAI(
+            azure_endpoint=OpenAISettings.ENDPOINT or "",
+            api_key=OpenAISettings.API_KEY or "",
+            api_version="2024-08-01-preview",
+        )
+        self._model = OpenAISettings.CHAT_MODEL
+
+    async def run(self, prompt: str) -> _AgentResponse:
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=[
+                {"role": "system", "content": self._instructions},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,
+        )
+        text = response.choices[0].message.content or ""
+        return _AgentResponse(text)
 
 
 class AzureAIProvider:
-    """Provider for creating agents using Azure AI Project client.
-
-    Uses Azure's AI Foundry to instantiate and configure agents
-    with custom names, instructions, and tools.
-
-    Example:
-        provider = AzureAIProvider()
-        agent = await provider.build(
-            name="MyAgent",
-            instructions="You are a helpful assistant."
-        )
-    """
+    """Builds lightweight OpenAI-backed agents compatible with the agent interface."""
 
     async def build(
         self,
         name: str,
         instructions: str,
-        tools: list[Any] | None = None,
-    ) -> Any:
-        """Build and return an Azure AI agent.
-
-        Args:
-            name: Unique identifier for the agent.
-            instructions: System prompt defining agent behavior.
-            tools: Optional list of tools the agent can use.
-
-        Returns:
-            Configured agent instance ready to handle requests.
-        """
-        async with (
-            AzureCliCredential() as credential,
-            AIProjectClient(
-                endpoint=AgentSettings.get_project_endpoint(),
-                credential=credential,
-            ) as project_client,
-        ):
-            created_agent = await project_client.agents.create_version(
-                agent_name=name,
-                definition=PromptAgentDefinition(
-                    model=AgentSettings.get_model_deployment_name(),
-                    instructions=instructions,
-                    tools=tools or [],
-                ),
-            )
-
-            provider = AzureAIProjectAgentProvider(project_client=project_client)
-            agent = provider.as_agent(created_agent)
-
-            return agent
+        tools: list | None = None,
+    ) -> _SimpleAgent:
+        return _SimpleAgent(instructions=instructions)

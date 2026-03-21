@@ -6,8 +6,27 @@ from src.core.dependencies import get_current_user_id
 from src.models.schemas import ChatCreate, ChatResponse, ChatMessage, SimplifiedResponse
 from src.services import cosmos_service, search_service
 from src.agents.adaptation_agent import run_adaptation_pipeline
+from src.agents.comprehension_agent import comprehension_agent
+from pydantic import BaseModel, Field
+
+class ComprehensionRequest(BaseModel):
+    simplified_text: str
 
 router = APIRouter(prefix="/chats", tags=["chats"])
+
+
+@router.get("", response_model=list[ChatResponse])
+async def list_chats(user_id: str = Depends(get_current_user_id)):
+    chats = await cosmos_service.list_user_chats(user_id)
+    return [
+        ChatResponse(
+            chat_id=c["id"],
+            title=c.get("title", "Chat"),
+            user_id=c["user_id"],
+            created_at=c["created_at"],
+        )
+        for c in chats
+    ]
 
 
 @router.post("", response_model=ChatResponse, status_code=status.HTTP_201_CREATED)
@@ -18,6 +37,27 @@ async def create_chat(body: ChatCreate, user_id: str = Depends(get_current_user_
         title=chat["title"],
         user_id=chat["user_id"],
         created_at=chat["created_at"],
+    )
+
+
+class ChatTitleUpdate(BaseModel):
+    title: str = Field(min_length=1, max_length=100)
+
+
+@router.patch("/{chat_id}", response_model=ChatResponse)
+async def update_chat_title(
+    chat_id: str,
+    body: ChatTitleUpdate,
+    user_id: str = Depends(get_current_user_id),
+):
+    updated = await cosmos_service.update_chat_title(chat_id, user_id, body.title)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return ChatResponse(
+        chat_id=updated["id"],
+        title=updated["title"],
+        user_id=updated["user_id"],
+        created_at=updated["created_at"],
     )
 
 
@@ -50,3 +90,24 @@ async def send_message(
     )
 
     return response
+
+
+@router.delete("/{chat_id}", status_code=204)
+async def delete_chat(
+    chat_id: str,
+    user_id: str = Depends(get_current_user_id),
+):
+    deleted = await cosmos_service.delete_chat(chat_id, user_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+
+@router.post("/{chat_id}/comprehension")
+async def get_comprehension(
+    chat_id: str,
+    body: ComprehensionRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    agent = await comprehension_agent()
+    questions = await agent.run(body.simplified_text)
+    return {"questions": questions}

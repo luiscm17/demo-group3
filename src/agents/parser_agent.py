@@ -1,7 +1,8 @@
 """Parser Agent — extracts clean text from PDF/Word using Azure Document Intelligence."""
 
-import io
+import base64
 from azure.ai.documentintelligence.aio import DocumentIntelligenceClient
+from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
 from azure.core.credentials import AzureKeyCredential
 
 from src.config.settings import DocumentIntelligenceSettings
@@ -26,8 +27,9 @@ async def extract_text(file_bytes: bytes, filename: str) -> str:
     ) as client:
         poller = await client.begin_analyze_document(
             "prebuilt-read",
-            analyze_request=file_bytes,
-            content_type="application/octet-stream",
+            AnalyzeDocumentRequest(
+                bytes_source=base64.b64encode(file_bytes).decode()
+            ),
         )
         result = await poller.result()
         return result.content or ""

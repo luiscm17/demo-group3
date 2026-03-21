@@ -10,10 +10,23 @@ from azure.cosmos.exceptions import CosmosResourceNotFoundError
 from src.config.settings import CosmosDBSettings
 from src.models.schemas import UserProfile, UserProfileUpdate
 
+# Singleton client — created once, reused across all requests to avoid
+# connection pool exhaustion and cold-start timeouts.
+_cosmos_client: CosmosClient | None = None
+
 
 def _client() -> CosmosClient:
-    CosmosDBSettings.validate()
-    return CosmosClient(CosmosDBSettings.ENDPOINT, credential=CosmosDBSettings.KEY)
+    global _cosmos_client
+    if _cosmos_client is None:
+        CosmosDBSettings.validate()
+        _cosmos_client = CosmosClient(
+            CosmosDBSettings.ENDPOINT, credential=CosmosDBSettings.KEY
+        )
+    return _cosmos_client
+
+
+def _db(client: CosmosClient):
+    return client.get_database_client(CosmosDBSettings.DATABASE)
 
 
 # ---------------------------------------------------------------------------
@@ -21,26 +34,20 @@ def _client() -> CosmosClient:
 # ---------------------------------------------------------------------------
 
 async def get_user_profile(user_id: str) -> Optional[UserProfile]:
-    async with _client() as client:
-        container = client.get_database_client(CosmosDBSettings.DATABASE).get_container_client(
-            CosmosDBSettings.USERS_CONTAINER
-        )
-        try:
-            item = await container.read_item(item=user_id, partition_key=user_id)
-            return _item_to_profile(item)
-        except CosmosResourceNotFoundError:
-            return None
+    container = _db(_client()).get_container_client(CosmosDBSettings.USERS_CONTAINER)
+    try:
+        item = await container.read_item(item=user_id, partition_key=user_id)
+        return _item_to_profile(item)
+    except CosmosResourceNotFoundError:
+        return None
 
 
 async def get_user_by_email(email: str) -> Optional[dict]:
-    async with _client() as client:
-        container = client.get_database_client(CosmosDBSettings.DATABASE).get_container_client(
-            CosmosDBSettings.USERS_CONTAINER
-        )
-        query = "SELECT * FROM c WHERE c.email = @email"
-        params = [{"name": "@email", "value": email}]
-        results = [item async for item in container.query_items(query=query, parameters=params)]
-        return results[0] if results else None
+    container = _db(_client()).get_container_client(CosmosDBSettings.USERS_CONTAINER)
+    query = "SELECT * FROM c WHERE c.email = @email"
+    params = [{"name": "@email", "value": email}]
+    results = [item async for item in container.query_items(query=query, parameters=params)]
+    return results[0] if results else None
 
 
 async def create_user_profile(user_id: str, email: str, name: str, hashed_password: str) -> UserProfile:
@@ -59,28 +66,21 @@ async def create_user_profile(user_id: str, email: str, name: str, hashed_passwo
         "fatigue_history": [],
         "created_at": now,
     }
-    async with _client() as client:
-        container = client.get_database_client(CosmosDBSettings.DATABASE).get_container_client(
-            CosmosDBSettings.USERS_CONTAINER
-        )
-        await container.create_item(item)
+    container = _db(_client()).get_container_client(CosmosDBSettings.USERS_CONTAINER)
+    await container.create_item(item)
     return _item_to_profile(item)
 
 
 async def update_user_profile(user_id: str, updates: UserProfileUpdate) -> Optional[UserProfile]:
-    async with _client() as client:
-        container = client.get_database_client(CosmosDBSettings.DATABASE).get_container_client(
-            CosmosDBSettings.USERS_CONTAINER
-        )
-        try:
-            item = await container.read_item(item=user_id, partition_key=user_id)
-        except CosmosResourceNotFoundError:
-            return None
-
-        patch = updates.model_dump(exclude_none=True)
-        item.update(patch)
-        await container.replace_item(item=user_id, body=item)
-        return _item_to_profile(item)
+    container = _db(_client()).get_container_client(CosmosDBSettings.USERS_CONTAINER)
+    try:
+        item = await container.read_item(item=user_id, partition_key=user_id)
+    except CosmosResourceNotFoundError:
+        return None
+    patch = updates.model_dump(exclude_none=True)
+    item.update(patch)
+    await container.replace_item(item=user_id, body=item)
+    return _item_to_profile(item)
 
 
 def _item_to_profile(item: dict) -> UserProfile:
@@ -116,38 +116,60 @@ async def save_document_metadata(
         "status": "indexed",
         "uploaded_at": now,
     }
-    async with _client() as client:
-        container = client.get_database_client(CosmosDBSettings.DATABASE).get_container_client(
-            CosmosDBSettings.DOCUMENTS_CONTAINER
-        )
-        await container.create_item(item)
+    container = _db(_client()).get_container_client(CosmosDBSettings.DOCUMENTS_CONTAINER)
+    await container.create_item(item)
     return item
 
 
 async def list_user_documents(user_id: str) -> list[dict]:
-    async with _client() as client:
-        container = client.get_database_client(CosmosDBSettings.DATABASE).get_container_client(
-            CosmosDBSettings.DOCUMENTS_CONTAINER
-        )
-        query = "SELECT * FROM c WHERE c.user_id = @user_id ORDER BY c.uploaded_at DESC"
-        params = [{"name": "@user_id", "value": user_id}]
-        return [item async for item in container.query_items(query=query, parameters=params)]
+    container = _db(_client()).get_container_client(CosmosDBSettings.DOCUMENTS_CONTAINER)
+    query = "SELECT * FROM c WHERE c.user_id = @user_id ORDER BY c.uploaded_at DESC"
+    params = [{"name": "@user_id", "value": user_id}]
+    return [item async for item in container.query_items(query=query, parameters=params)]
 
 
 async def delete_document_metadata(document_id: str, user_id: str) -> None:
-    async with _client() as client:
-        container = client.get_database_client(CosmosDBSettings.DATABASE).get_container_client(
-            CosmosDBSettings.DOCUMENTS_CONTAINER
-        )
-        try:
-            await container.delete_item(item=document_id, partition_key=user_id)
-        except CosmosResourceNotFoundError:
-            pass
+    container = _db(_client()).get_container_client(CosmosDBSettings.DOCUMENTS_CONTAINER)
+    try:
+        await container.delete_item(item=document_id, partition_key=user_id)
+    except CosmosResourceNotFoundError:
+        pass
 
 
 # ---------------------------------------------------------------------------
 # Chats
 # ---------------------------------------------------------------------------
+
+async def list_user_chats(user_id: str) -> list[dict]:
+    container = _db(_client()).get_container_client(CosmosDBSettings.CHATS_CONTAINER)
+    query = "SELECT * FROM c WHERE c.user_id = @user_id ORDER BY c.created_at DESC"
+    params = [{"name": "@user_id", "value": user_id}]
+    return [item async for item in container.query_items(query=query, parameters=params)]
+
+
+async def update_chat_title(chat_id: str, user_id: str, title: str) -> Optional[dict]:
+    container = _db(_client()).get_container_client(CosmosDBSettings.CHATS_CONTAINER)
+    query = "SELECT * FROM c WHERE c.id = @id AND c.user_id = @user_id"
+    params = [{"name": "@id", "value": chat_id}, {"name": "@user_id", "value": user_id}]
+    results = [item async for item in container.query_items(query=query, parameters=params)]
+    if not results:
+        return None
+    item = results[0]
+    item["title"] = title
+    await container.replace_item(item=item["id"], body=item, partition_key=user_id)
+    return item
+
+
+async def delete_chat(chat_id: str, user_id: str) -> bool:
+    container = _db(_client()).get_container_client(CosmosDBSettings.CHATS_CONTAINER)
+    query = "SELECT * FROM c WHERE c.id = @id AND c.user_id = @user_id"
+    params = [{"name": "@id", "value": chat_id}, {"name": "@user_id", "value": user_id}]
+    results = [item async for item in container.query_items(query=query, parameters=params)]
+    if not results:
+        return False
+    await container.delete_item(item=results[0]["id"], partition_key=user_id)
+    return True
+
 
 async def create_chat(user_id: str, title: Optional[str]) -> dict:
     now = datetime.now(timezone.utc).isoformat()
@@ -157,9 +179,6 @@ async def create_chat(user_id: str, title: Optional[str]) -> dict:
         "title": title or "New chat",
         "created_at": now,
     }
-    async with _client() as client:
-        container = client.get_database_client(CosmosDBSettings.DATABASE).get_container_client(
-            CosmosDBSettings.CHATS_CONTAINER
-        )
-        await container.create_item(item)
+    container = _db(_client()).get_container_client(CosmosDBSettings.CHATS_CONTAINER)
+    await container.create_item(item)
     return item
