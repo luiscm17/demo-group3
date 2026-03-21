@@ -1,5 +1,5 @@
 using './main.bicep'
 
-param namePrefix = 'mshack'
+param namePrefix = 'hackms'
 
 param location = 'eastus'
