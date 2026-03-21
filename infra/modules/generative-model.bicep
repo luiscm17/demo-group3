@@ -1,5 +1,6 @@
-@description('Bicep module for deploying a generative model within an existing AI Foundry account.')
+@description('Bicep module for deploying a generative model within an existing AI Project.')
 param resourceName string
+
 
 @description('Generative Model Deployment.')
 param modelDeploymentName string

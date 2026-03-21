@@ -1,5 +1,6 @@
-@description('Bicep module for deploying a embedding model within an existing AI Foundry account.')
+@description('Bicep module for deploying a embedding model within an existing AI Project.')
 param resourceName string
+
 
 @description('Embedding Model Deployment.')
 param embeddingModelDeploymentName string
