@@ -863,8 +863,13 @@ dependencies = [
     { name = "anyio", marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
     { name = "mcp", marker = "platform_machine != 'x86_64' or sys_platform != 'linux'" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/03/cf/2bd8d55bab57e458044a5e530a2320fecfcc91ec5546972b2c3db15fd09a/claude_agent_sdk-0.1.49.tar.gz", hash = "sha256:6a93f7e51951623d94c0b35172d1d25d7c44f8dd083568d3252a6ed3ac8719bf", size = 95079, upload-time = "2026-03-20T17:31:09.274Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/65/08/0e33ede7b3035ba953f5a59597b8cb94ea2f3fb3124e5d6f6e255bf9c025/claude_agent_sdk-0.1.49-py3-none-macosx_11_0_arm64.whl", hash = "sha256:a869330d4a15b12c96ae24144b8e29999ff25315267f248634986179e9536a04", size = 57620663, upload-time = "2026-03-17T00:44:27.792Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/dd/0c4fa243e5e1ac794193aeb3a48d834cbe896e9f91666b9d087ec560ff8e/claude_agent_sdk-0.1.49-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:30a5039a0de6577fe15c568182e3f615e652eda5ef7cc247b5bdbc2d94dee391", size = 60418943, upload-time = "2026-03-20T17:30:49.513Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/73/c153e0431ff18deba9ebde6ca190e717c5c5e8306a88f10e454cd9ca265a/claude_agent_sdk-0.1.49-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:8414cfbb9fed0eadb429a9443dcdea9b1978b687098d46d37748b6833d4f10ac", size = 74001537, upload-time = "2026-03-20T17:30:54.119Z" },
+    { url = "https://files.pythonhosted.org/packages/41/22/e1377286850a87164ac481935126e78fe29b883bca3a711e589fce21dccf/claude_agent_sdk-0.1.49-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:e4a3c3abac8a2013a40970d0a1d745a64bcb1750f8a62b656e01776715245098", size = 74655236, upload-time = "2026-03-20T17:30:59.552Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/8b/327bca8e5684aad13db6476863fd727c31cecbe3582ca545c881b8cfe231/claude_agent_sdk-0.1.49-py3-none-win_amd64.whl", hash = "sha256:1b5cd34c231055d917c74833b944cf220e08b43b4804969654902f07d0f0957b", size = 75280600, upload-time = "2026-03-20T17:31:05.646Z" },
 ]
 
 [[package]]
@@ -969,14 +974,20 @@ source = { virtual = "." }
 dependencies = [
     { name = "agent-framework" },
     { name = "agent-framework-azure-ai" },
+    { name = "azure-search-documents" },
+    { name = "azure-storage-blob" },
     { name = "dotenv" },
+    { name = "pytest" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "agent-framework", specifier = ">=1.0.0rc4" },
     { name = "agent-framework-azure-ai", specifier = ">=1.0.0rc4" },
+    { name = "azure-search-documents", specifier = ">=11.7.0b2" },
+    { name = "azure-storage-blob", specifier = ">=12.29.0b1" },
     { name = "dotenv", specifier = ">=0.9.9" },
+    { name = "pytest", specifier = ">=9.0.2" },
 ]
 
 [[package]]
@@ -1366,6 +1377,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f3/49/3b30cad09e7771a4982d9975a8cbf64f00d4a1ececb53297f1d9a7be1b10/importlib_metadata-8.7.1.tar.gz", hash = "sha256:49fef1ae6440c182052f407c8d34a68f72efc36db9ca90dc0113398f2fdde8bb", size = 57107, upload-time = "2025-12-21T10:00:19.278Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/5e/f8e9a1d23b9c20a551a8a02ea3637b4642e22c2626e3a13a9a29cdea99eb/importlib_metadata-8.7.1-py3-none-any.whl", hash = "sha256:5a1f80bf1daa489495071efbb095d75a634cf28a8bc299581244063b53176151", size = 27865, upload-time = "2025-12-21T10:00:18.329Z" },
+]
+
+[[package]]
+name = "iniconfig"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/72/34/14ca021ce8e5dfedc35312d08ba8bf51fdd999c576889fc2c24cb97f4f10/iniconfig-2.3.0.tar.gz", hash = "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730", size = 20503, upload-time = "2025-10-18T21:55:43.219Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12", size = 7484, upload-time = "2025-10-18T21:55:41.639Z" },
 ]
 
 [[package]]
@@ -1963,6 +1983,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pluggy"
+version = "1.6.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
+]
+
+[[package]]
 name = "portalocker"
 version = "3.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2213,6 +2242,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pygments"
+version = "2.19.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b0140bde72ea885a803b82086995367bf2037de0159d924/pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887", size = 4968631, upload-time = "2025-06-21T13:39:12.283Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217, upload-time = "2025-06-21T13:39:07.939Z" },
+]
+
+[[package]]
 name = "pyjwt"
 version = "2.12.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2224,6 +2262,22 @@ wheels = [
 [package.optional-dependencies]
 crypto = [
     { name = "cryptography" },
+]
+
+[[package]]
+name = "pytest"
+version = "9.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "iniconfig" },
+    { name = "packaging" },
+    { name = "pluggy" },
+    { name = "pygments" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d1/db/7ef3487e0fb0049ddb5ce41d3a49c235bf9ad299b6a25d5780a89f19230f/pytest-9.0.2.tar.gz", hash = "sha256:75186651a92bd89611d1d9fc20f0b4345fd827c41ccd5c299a868a05d70edf11", size = 1568901, upload-time = "2025-12-06T21:30:51.014Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/ab/b3226f0bd7cdcf710fbede2b3548584366da3b19b5021e74f5bde2a8fa3f/pytest-9.0.2-py3-none-any.whl", hash = "sha256:711ffd45bf766d5264d487b917733b453d917afd2b0ad65223959f59089f875b", size = 374801, upload-time = "2025-12-06T21:30:49.154Z" },
 ]
 
 [[package]]
