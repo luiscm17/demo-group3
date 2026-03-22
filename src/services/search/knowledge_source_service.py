@@ -38,9 +38,11 @@ class KnowledgeSourceService:
         # Azure OpenAI endpoint and key for embedding and chat models
         self._aoai_endpoint = AzureOpenAISettings.get_endpoint()
         self._aoai_key = AzureOpenAISettings.get_api_key()
+        self._embedding_name = AzureOpenAISettings.get_embedding_model_name()
+        self._embedding_deployment_name = AzureOpenAISettings.get_embedding_deployment_name()
 
     def create_knowledge_source(
-        self, name: str, description: str
+        self, container_name: str, description: str
     ) -> AzureBlobKnowledgeSource:
         """
         Construct an AzureBlobKnowledgeSource with minimal extraction and default models.
@@ -55,16 +57,16 @@ class KnowledgeSourceService:
         # Build vectorizer parameters for embeddings
         embedding_params = AzureOpenAIVectorizerParameters(
             resource_url=self._aoai_endpoint,
-            deployment_name=AgentSettings.get_model_deployment_name(),
-            model_name=AgentSettings.get_model_deployment_name(),
+            deployment_name=AzureOpenAISettings.get_embedding_deployment_name(),
+            model_name=AzureOpenAISettings.get_embedding_model_name(),
             api_key=self._aoai_key,
         )
 
         # Build vectorizer parameters for chat completions
         chat_params = AzureOpenAIVectorizerParameters(
             resource_url=self._aoai_endpoint,
-            deployment_name=AgentSettings.get_model_deployment_name(),
-            model_name=AgentSettings.get_model_deployment_name(),
+            deployment_name=AzureOpenAISettings.get_deployment_name(),
+            model_name=AzureOpenAISettings.get_model_name(),
             api_key=self._aoai_key,
         )
 
@@ -90,7 +92,7 @@ class KnowledgeSourceService:
         )
 
         return AzureBlobKnowledgeSource(
-            name=name,
+            name=container_name,
             description=description,
             azure_blob_parameters=blob_params,
         )
