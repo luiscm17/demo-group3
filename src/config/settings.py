@@ -67,3 +67,97 @@ class BlobStorageSettings:
             raise ValueError("AZURE_STORAGE_CONNECTION_STRING is not configured")
         if not cls.AZURE_STORAGE_CONTAINER:
             raise ValueError("AZURE_STORAGE_CONTAINER is not configured")
+
+
+class AISearchSettings:
+    _AI_SEARCH_ENDPOINT: Optional[str] = os.getenv("AI_SEARCH_ENDPOINT")
+    _AI_SEARCH_API_KEY: Optional[str] = os.getenv("AI_SEARCH_KEY")
+    _AI_SEARCH_INDEX_NAME: Optional[str] = os.getenv("AI_SEARCH_INDEX_NAME")
+
+    @classmethod
+    def validate(cls) -> None:
+        if not cls._AI_SEARCH_ENDPOINT:
+            raise ValueError("AI_SEARCH_ENDPOINT is not configured")
+        if not cls._AI_SEARCH_INDEX_NAME:
+            raise ValueError("AI_SEARCH_INDEX_NAME is not configured")
+        if not cls._AI_SEARCH_API_KEY:
+            raise ValueError("AI_SEARCH_KEY is not configured")
+
+    @classmethod
+    def get_endpoint(cls) -> str:
+        """Retrieve the Azure Search endpoint from environment."""
+        ai_search_endpoint = cls._AI_SEARCH_ENDPOINT
+        if not ai_search_endpoint:
+            raise ValueError("AI_SEARCH_ENDPOINT is not configured")
+        return ai_search_endpoint
+
+    @classmethod
+    def get_api_key(cls) -> str:
+        """Retrieve the Azure Search API key from environment."""
+        ai_search_key = cls._AI_SEARCH_API_KEY
+        if not ai_search_key:
+            raise ValueError("AI_SEARCH_KEY is not configured")
+        return ai_search_key
+
+    @classmethod
+    def get_index_name(cls) -> str:
+        """Retrieve the Azure Search index name from environment."""
+        ai_search_name = cls._AI_SEARCH_INDEX_NAME
+        if not ai_search_name:
+            raise ValueError("AI_SEARCH_INDEX_NAME is not configured")
+        return ai_search_name
+
+
+class AzureOpenAISettings:
+    """Settings for Azure OpenAI resource."""
+
+    _AOAI_ENDPOINT: Optional[str] = os.getenv("AOAI_ENDPOINT")
+    _AOAI_API_KEY: Optional[str] = os.getenv("AOAI_KEY")
+
+    @classmethod
+    def get_endpoint(cls) -> str:
+        """Retrieve the Azure OpenAI endpoint from environment."""
+        aoai_endpoint = cls._AOAI_ENDPOINT
+        if not aoai_endpoint:
+            raise ValueError("AOAI_ENDPOINT is not configured")
+        return aoai_endpoint
+
+    @classmethod
+    def get_api_key(cls) -> str:
+        """Retrieve the Azure OpenAI API key from environment."""
+        aoai_api_key = cls._AOAI_API_KEY
+        if not aoai_api_key:
+            raise ValueError("AOAI_KEY is not configured")
+        return aoai_api_key
+
+
+class KnowledgeSourceSettings:
+    """Centralized settings for the default knowledge source."""
+
+    _KS_DEFAULT_NAME = "mypdf-ks-v1"
+    _KS_DEFAULT_DESCRIPTION = "Knowledge Source automática desde Blob con mi PDF"
+    _KS_NAME: Optional[str] = os.getenv("KNOWLEDGE_SOURCE_NAME")
+    _KS_DESCRIPTION: Optional[str] = os.getenv("KNOWLEDGE_SOURCE_DESCRIPTION")
+
+    @classmethod
+    def _value_or_default(cls, value: Optional[str], default: str) -> str:
+        resolved = value or default
+        if not resolved.strip():
+            raise ValueError("Knowledge source values must not be empty")
+        return resolved
+
+    @classmethod
+    def get_name(cls) -> str:
+        """Return the configured knowledge source name."""
+        return cls._value_or_default(cls._KS_NAME, cls._KS_DEFAULT_NAME)
+
+    @classmethod
+    def get_description(cls) -> str:
+        """Return the configured knowledge source description."""
+        return cls._value_or_default(cls._KS_DESCRIPTION, cls._KS_DEFAULT_DESCRIPTION)
+
+    @classmethod
+    def validate(cls) -> None:
+        """Ensure both name and description are resolvable."""
+        cls.get_name()
+        cls.get_description()
