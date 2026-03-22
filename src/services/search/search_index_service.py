@@ -19,13 +19,13 @@ class SearchIndexService:
             ValueError: If settings are not properly configured.
         """
         AISearchSettings.validate()
-        endpoint = AISearchSettings.get_endpoint()
-        api_key = AISearchSettings.get_api_key()
+        ai_search_endpoint = AISearchSettings.get_endpoint()
+        ai_search_api_key = AISearchSettings.get_api_key()
         index_name = AISearchSettings.get_index_name()
 
-        self._client = SearchIndexClient(
-            endpoint=endpoint,
-            credential=AzureKeyCredential(api_key),
+        self._client_index = SearchIndexClient(
+            endpoint=ai_search_endpoint,
+            credential=AzureKeyCredential(ai_search_api_key),
         )
         self._index_name = index_name
 
@@ -36,7 +36,7 @@ class SearchIndexService:
         Returns:
             SearchIndexClient: The Azure Search Index client.
         """
-        return self._client
+        return self._client_index
 
     def get_index_name(self) -> str:
         """
