@@ -39,7 +39,7 @@ async def teacher_agent():
     """
     provider = AzureAIProvider()
     agent = await provider.build(
-        name="TeacherAgent",
+        agent_name="TeacherAgent",
         instructions="""You are a teacher specialized in explaining concepts clearly when students don't understand.
 
 GUIDELINES:

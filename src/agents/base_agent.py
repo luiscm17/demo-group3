@@ -28,7 +28,7 @@ class AzureAIProvider:
 
     async def build(
         self,
-        name: str,
+        agent_name: str,
         instructions: str,
         tools: list[Any] | None = None,
     ) -> Any:
@@ -50,15 +50,17 @@ class AzureAIProvider:
             ) as project_client,
         ):
             created_agent = await project_client.agents.create_version(
-                agent_name=name,
+                agent_name=agent_name,
                 definition=PromptAgentDefinition(
                     model=AgentSettings.get_model_deployment_name(),
                     instructions=instructions,
                     tools=tools or [],
                 ),
             )
-
-            provider = AzureAIProjectAgentProvider(project_client=project_client)
-            agent = provider.as_agent(created_agent)
+            try:
+                provider = AzureAIProjectAgentProvider(project_client=project_client)
+                agent = provider.as_agent(created_agent)
+            finally:
+                pass
 
             return agent
