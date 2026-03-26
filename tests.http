@@ -4,6 +4,7 @@
 @userId = {{login.response.body.userId}}
 
 ### 1. Auth: Register
+# @name register
 POST {{host}}/auth/register
 Content-Type: {{contentType}}
 
@@ -13,7 +14,29 @@ Content-Type: {{contentType}}
     "name": "Test User"
 }
 
-### 2. Auth: Login
+
+### 1.1 Auth: Register (duplicate email)
+POST {{host}}/auth/register
+Content-Type: {{contentType}}
+
+{
+    "email": "user@example.com",
+    "password": "password123",
+    "name": "Test User"
+}
+
+
+### 2.1 Auth: Login (invalid password)
+POST {{host}}/auth/login
+Content-Type: {{contentType}}
+
+{
+    "email": "user@example.com",
+    "password": "wrong-password"
+}
+
+
+### 2.2 Auth: Login (valid)
 # @name login
 POST {{host}}/auth/login
 Content-Type: {{contentType}}
@@ -23,17 +46,42 @@ Content-Type: {{contentType}}
     "password": "password123"
 }
 
-### 3. Documents: Upload
+### 3. Documents: Upload (PDF)
 POST {{host}}/documents
 Authorization: Bearer {{token}}
 Content-Type: multipart/form-data; boundary=boundary
 
 --boundary
-Content-Disposition: form-data; name="file"; filename="test_document.txt"
-Content-Type: text/plain
+Content-Disposition: form-data; name="file"; filename="pdf-examen-wellsharp-con-respuestas-2_compress.pdf"
+Content-Type: application/pdf
 
-Este es un documento de prueba para DocSimplify AI.
+@resource/pdf-examen-wellsharp-con-respuestas-2_compress.pdf
 --boundary--
+
+### 3.1 Documents: Upload (missing token)
+POST {{host}}/documents
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="pdf-well-control-examen_compress.pdf"
+Content-Type: application/pdf
+
+@resource/pdf-well-control-examen_compress.pdf
+--boundary--
+
+
+### 3.2 Documents: Upload (unsupported mime)
+POST {{host}}/documents
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="malware.exe"
+Content-Type: application/octet-stream
+
+Binary data ignored.
+--boundary--
+
 
 ### 4. Documents: List
 # @name listDocuments
@@ -41,10 +89,12 @@ Este es un documento de prueba para DocSimplify AI.
 GET {{host}}/documents
 Authorization: Bearer {{token}}
 
-### 5. Documents: Download
-# Note: This variable captures the blobName from the FIRST item in the List response
-@blobName = {{listDocuments.response.body[0].blobName}}
 
+### 4.1 Capture blobName
+@blobName = {{listDocuments.response.body.0.blobName}}
+
+### 5. Documents: Download
+# NOTE: Ejecutar esta petición sólo después de "4. Documents: List" para que el índice 0 exista
 GET {{host}}/documents/{{blobName}}
 Authorization: Bearer {{token}}
 
