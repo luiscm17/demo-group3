@@ -1,0 +1,66 @@
+@host = http://localhost:8001/api/v1
+@contentType = application/json
+@token = {{login.response.body.token}}
+@userId = {{login.response.body.userId}}
+
+### 1. Auth: Register
+POST {{host}}/auth/register
+Content-Type: {{contentType}}
+
+{
+    "email": "user@example.com",
+    "password": "password123",
+    "name": "Test User"
+}
+
+### 2. Auth: Login
+# @name login
+POST {{host}}/auth/login
+Content-Type: {{contentType}}
+
+{
+    "email": "user@example.com",
+    "password": "password123"
+}
+
+### 3. Documents: Upload
+POST {{host}}/documents
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="test_document.txt"
+Content-Type: text/plain
+
+Este es un documento de prueba para DocSimplify AI.
+--boundary--
+
+### 4. Documents: List
+# @name listDocuments
+# IMPORTANT: Run this before 'Download' or 'Delete' to populate variables
+GET {{host}}/documents
+Authorization: Bearer {{token}}
+
+### 5. Documents: Download
+# Note: This variable captures the blobName from the FIRST item in the List response
+@blobName = {{listDocuments.response.body[0].blobName}}
+
+GET {{host}}/documents/{{blobName}}
+Authorization: Bearer {{token}}
+
+### 6. Documents: Delete
+DELETE {{host}}/documents/{{blobName}}
+Authorization: Bearer {{token}}
+
+### 7. Chats: Send Message
+POST {{host}}/chats
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+    "message": "Hola, ¿puedes simplificar este documento?",
+    "fatigueLevel": 1
+}
+
+### 8. Health Check
+GET http://localhost:8001/health
