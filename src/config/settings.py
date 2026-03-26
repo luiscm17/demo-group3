@@ -1,6 +1,7 @@
 """Application settings loaded from environment variables."""
 
 import os
+from pathlib import Path
 from typing import Optional, List
 
 from dotenv import load_dotenv
@@ -55,6 +56,17 @@ class AuthSettings:
     SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "change-me-in-production")
     ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
+
+
+class AuthStorageSettings:
+    """Settings for simple user storage used during authentication."""
+
+    DB_PATH: str = os.getenv("AUTH_DB_PATH", "data/users.db")
+
+    @classmethod
+    def get_db_path(cls) -> Path:
+        path = Path(cls.DB_PATH)
+        return path if path.is_absolute() else Path.cwd() / path
 
 
 class BlobStorageSettings:
