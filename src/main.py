@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from src.config.settings import CORS_ORIGINS
 
-from src.api.v1.routers import auth, users, documents, chats, shared
+from src.api.v1.routers import auth, documents, chats
 
 app = FastAPI(
     title="DocSimplify AI",
@@ -27,10 +27,8 @@ app.add_middleware(
 api_router = APIRouter(prefix="/api/v1", tags=["v1"])
 for router in (
     auth.router,
-    users.router,
     documents.router,
     chats.router,
-    shared.router,
 ):
     api_router.include_router(router)
 app.include_router(api_router)
