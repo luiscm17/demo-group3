@@ -1,64 +1,77 @@
-from agent_framework import (
-    Agent,
-    AgentExecutorResponse,
-    AgentResponseUpdate,
-    Executor,
-    WorkflowBuilder,
-    WorkflowContext,
-    handler,
-)
+# orchestrations/orchestrator_agent.py
+from typing import List
 
-from src.agents.triage_agent import triage_agent
-from src.agents.focus_assistant_agent import focus_assistant_agent
-from src.agents.learning_support_agent import learning_support_agent
-from src.agents.task_descomposer_agent import task_descomposer_agent
-from src.agents.explainability_agent import explainability_agent
-from src.agents.simplifier_agent import simplifier_agent
-from src.agents.providers.azure_ai_project import AIProjectProvider
+from agent_framework import AgentSession
+from agent_framework.orchestrations import ConcurrentBuilder
+
+from src.agents.task_selector_agent import TaskSelectorAgent
+from src.agents.simplifier_agent import SimplifierAgent
+from src.agents.task_decomposer_agent import TaskDecomposerAgent
+from src.agents.learning_support_agent import LearningSupportAgent
+from src.agents.focus_assistant_agent import FocusAssistantAgent
 
 
-class AgentOrchestrator:
-    """Orquestador con estado persistente en Redis."""
+class OrchestratorAgent:
+    """
+    Orquestador para comprensión lectora con TDH.
+    Flujo: Task Selector → Fan-out (3 agentes) → Focus Assistant
+    """
 
-    def __init__(self, redis_url="redis://localhost:6379"):
-        self.workflow = None
-        self.redis_url = redis_url
-        self.provider = AIProjectProvider()
+    def __init__(self):
+        self.selector = TaskSelectorAgent()
+        self.simplifier = SimplifierAgent()
+        self.decomposer = TaskDecomposerAgent()
+        self.learning_support = LearningSupportAgent()
+        self.focus_assistant = FocusAssistantAgent()
 
-    async def setup(self):
-        triage = await triage_agent(self.provider)
-        focus_assistant = await focus_assistant_agent(self.provider)
-        learning_support = await learning_support_agent(self.provider)
-        task_descomposer = await task_descomposer_agent(self.provider)
-        explainability = await explainability_agent(self.provider)
-        simplifier = await simplifier_agent(self.provider)
+    async def run(self, user_query: str, session: AgentSession | None = None):
+        print(f"🎼 Iniciando orquestación para TDH...\nConsulta: {user_query[:120]}...\n")
 
-        workflow_builder = (
-            WorkflowBuilder(
-                name="docsimplify_workflow",
-                description="Workflow for Docsimplify AI Assistant",
-                start_executor=task_descomposer,
-                output_executors=[focus_assistant],
-            )
-            .add_fan_out_edges(
-                task_descomposer, [learning_support, explainability, simplifier]
-            )
-            .add_fan_in_edges(
-                [learning_support, explainability, simplifier], focus_assistant
-            )
-            .build()
-        )
-        self.workflow = workflow_builder.as_agent(
-            name="docsimplify_orchestrator",
-            description="Orchestrator for Docsimplify AI Assistant",
-        )
+        # Paso 1: Task Selector
+        print("📋 Ejecutando Task Selector...")
+        selector_result = await self.selector.run(user_query, session=session)
+        print(f"→ Task Selector: {selector_result}\n")
 
-    async def run(self, prompt: str, session_id: str | None = None):
-        """Execute the orchestrator workflow with the provided prompt."""
+        # Paso 2: Fan-out - Obtener los agentes reales
+        print("⚙️ Preparando fan-out...")
 
-        if not self.workflow:
-            raise RuntimeError("Agent workflow is not initialized. Call setup() first.")
+        # Obtenemos el agente real de cada wrapper
+        simplifier_agent = await self.simplifier.get_agent()
+        decomposer_agent = await self.decomposer.get_agent()
+        learning_agent = await self.learning_support.get_agent()
 
-        context = {"session_id": session_id} if session_id else None
-        result = await self.workflow.run(prompt, context=context)
-        return getattr(result, "text", result)
+        # Creamos el workflow concurrente
+        workflow = ConcurrentBuilder(
+            participants=[simplifier_agent, decomposer_agent, learning_agent]
+        ).build()
+
+        # Contexto para los 3 agentes en paralelo
+        parallel_context = f"""
+Consulta del usuario:
+{user_query}
+
+Decisión del Task Selector:
+{selector_result}
+"""
+
+        print("🚀 Ejecutando los 3 agentes en paralelo (fan-out)...\n")
+
+        parallel_results = await workflow.run(parallel_context)
+
+        # Paso 3: Fan-in con Focus Assistant
+        print("🔄 Combinando resultados con Focus Assistant...")
+
+        final_prompt = f"""
+Consulta original del usuario:
+{user_query}
+
+Decisión del Task Selector:
+{selector_result}
+
+Resultados de los agentes especializados:
+{parallel_results}
+"""
+
+        final_response = await self.focus_assistant.run(final_prompt, session=session)
+
+        return final_response
