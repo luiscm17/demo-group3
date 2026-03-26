@@ -1,21 +1,19 @@
-"""Entry point for DocSimplify CLI.
-
-Demonstrates usage of the TeacherAgent to answer questions
-about complex concepts in a simplified way.
-"""
-
 import asyncio
-from src.agents.teacher_agent import teacher_agent
-
+import logging
+from src.agents.orchestrator_agent import AgentOrchestrator
 
 async def main():
-    teacher = await teacher_agent()
+    orchestrator = AgentOrchestrator()
+    
+    # Provider must be kept alive for the entire session
+    async with orchestrator.provider:
+        await orchestrator.setup()
 
-    question = "What approach does the Artificial Neural Network Model for Prediction of Drilling Rate use to estimate drilling speed?"
-    response = await teacher.run(question)
-
-    print("User:", question)
-    print("TeacherAgent:", response)
+        session_id = "user123"
+        output = await orchestrator.run("Simplifica este documento para nivel A1", session_id)
+        print(output)
+    
+    # Provider is now closed
 
 
 if __name__ == "__main__":

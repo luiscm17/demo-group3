@@ -25,12 +25,12 @@ class AgentSettings:
         AI_MODEL_DEPLOYMENT_NAME: Name of the deployed model.
     """
 
-    _AI_PROJECT_ENDPOINT: Optional[str] = os.getenv("AI_PROJECT_ENDPOINT")
-    _AI_MODEL_DEPLOYMENT_NAME: Optional[str] = os.getenv("AI_MODEL_DEPLOYMENT_NAME")
+    _AZURE_AI_PROJECT_ENDPOINT: Optional[str] = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
+    _AZURE_AI_MODEL_DEPLOYMENT_NAME: Optional[str] = os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME")
 
     @classmethod
     def get_project_endpoint(cls) -> str:
-        endpoint = cls._AI_PROJECT_ENDPOINT
+        endpoint = cls._AZURE_AI_PROJECT_ENDPOINT
         if not endpoint:
             raise ValueError("AI_PROJECT_ENDPOINT is not configured")
         assert isinstance(endpoint, str)
@@ -38,7 +38,7 @@ class AgentSettings:
 
     @classmethod
     def get_model_deployment_name(cls) -> str:
-        model = cls._AI_MODEL_DEPLOYMENT_NAME
+        model = cls._AZURE_AI_MODEL_DEPLOYMENT_NAME
         if not model:
             raise ValueError("AI_MODEL_DEPLOYMENT_NAME is not configured")
         assert isinstance(model, str)
@@ -285,3 +285,12 @@ class MCPConnectionSettings:
         search_endpoint = AISearchSettings.get_endpoint()
         kb_name = KnowledgeBaseSettings.get_name()
         return f"{search_endpoint}/knowledgebases/{kb_name}/mcp?api-version=2025-11-01-Preview"
+
+class RedisSettings:
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
+    REDIS_KEY_PREFIX: str = os.getenv("REDIS_KEY_PREFIX", "chat_messages")
+    REDIS_PORT: int = 6379
+
+    @classmethod
+    def get_redis_url(cls) -> str:
+        return cls.REDIS_URL
