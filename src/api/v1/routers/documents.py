@@ -1,13 +1,10 @@
-"""Documents router for upload/list/delete with a frontend-friendly contract."""
-
 import uuid
-
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import Response
 
-from src.agents.parser_agent import chunk_text, extract_text
 from src.core.dependencies import get_current_user_id
-from src.models.schemas import DocumentItem, DocumentUploadResult
-from src.services import blob_service, cosmos_service, search_service
+from src.models.schemas.documents import DocumentItem, DocumentUploadResult
+from src.services import blob_service
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -19,128 +16,88 @@ ALLOWED_TYPES = {
 }
 
 
-def _normalize_document_status(status: str | None) -> str:
-    if not status:
-        return "completed"
-
-    normalized = status.strip().lower()
-    legacy_map = {
-        "indexed": "completed",
-        "done": "completed",
-        "queued": "processing",
-        "uploading": "processing",
-        "failed": "error",
-    }
-    return legacy_map.get(normalized, normalized)
-
-
-def _to_document_item(item: dict) -> DocumentItem:
-    return DocumentItem(
-        documentId=item["document_id"],
-        filename=item["filename"],
-        status=_normalize_document_status(item.get("status")),
-    )
-
-
-@router.post("", response_model=DocumentUploadResult, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=DocumentUploadResult, status_code=status.HTTP_201_CREATED, response_model_by_alias=True)
 async def upload_document(
     file: UploadFile = File(...),
     user_id: str = Depends(get_current_user_id),
 ):
+    """Upload a document exclusively to Blob Storage."""
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Only PDF, DOC, DOCX, and plain text files are supported",
+            detail="Unsupported file type",
         )
 
     file_bytes = await file.read()
     document_id = str(uuid.uuid4())
     filename = file.filename or f"document-{document_id}"
-    blob_name = f"{user_id}/{document_id}_{filename}"
-    blob_url = None
-    document_status = "completed"
-
+    
+    # Store with a unique prefix to avoid collisions
+    unique_filename = f"{document_id}_{filename}"
+    
     try:
-        blob_url = await blob_service.upload_document(file_bytes, f"{document_id}_{filename}", user_id)
-    except Exception:
-        document_status = "processing"
-
-    if search_service.layout_rag_enabled() and blob_url:
-        try:
-            await search_service.run_layout_indexer()
-            document_status = "processing"
-        except Exception:
-            if document_status == "completed":
-                document_status = "processing"
-    else:
-        try:
-            text = await extract_text(file_bytes, filename)
-            if text.strip():
-                chunks = chunk_text(text)
-                await search_service.index_document(document_id, user_id, filename, chunks)
-        except Exception:
-            if document_status == "completed":
-                document_status = "processing"
-
-    metadata = await cosmos_service.save_document_metadata(
-        document_id=document_id,
-        user_id=user_id,
-        filename=filename,
-        blob_url=blob_url,
-        blob_name=blob_name,
-        status=document_status,
-    )
-
-    return DocumentUploadResult(
-        success=True,
-        documentId=metadata["document_id"],
-        filename=metadata["filename"],
-        status=metadata["status"],
-    )
+        blob_url = await blob_service.upload_document(file_bytes, unique_filename, user_id)
+        return DocumentUploadResult(
+            success=True,
+            documentId=document_id,
+            filename=filename,
+            blobName=f"{user_id}/{unique_filename}",
+            status="uploaded"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload to storage: {str(e)}"
+        )
 
 
-@router.get("", response_model=list[DocumentItem])
+@router.get("", response_model=list[DocumentItem], response_model_by_alias=True)
 async def list_documents(user_id: str = Depends(get_current_user_id)):
-    items = await cosmos_service.list_user_documents(user_id)
-    if search_service.layout_rag_enabled():
-        for item in items:
-            if _normalize_document_status(item.get("status")) != "processing":
-                continue
-
-            ready = await search_service.layout_document_ready(
-                blob_url=item.get("blob_url"),
-                blob_name=item.get("blob_name"),
-                user_id=user_id,
-                document_id=item["document_id"],
-            )
-            if ready:
-                updated = await cosmos_service.update_document_status(
-                    item["document_id"],
-                    user_id,
-                    "completed",
-                )
-                if updated:
-                    item.update(updated)
-    return [_to_document_item(item) for item in items]
+    """List documents directly from Blob Storage."""
+    items = await blob_service.list_documents(user_id)
+    return [
+        DocumentItem(
+            documentId=item["document_id"] or "unknown",
+            filename=item["filename"],
+            blobName=item["blob_name"],
+            status="uploaded"
+        )
+        for item in items
+    ]
 
 
-@router.delete("/{document_id}", status_code=status.HTTP_200_OK)
-async def delete_document(document_id: str, user_id: str = Depends(get_current_user_id)):
-    metadata = await cosmos_service.get_document_metadata(document_id, user_id)
-    if not metadata:
+@router.get("/{blob_name:path}")
+async def download_document(
+    blob_name: str,
+    user_id: str = Depends(get_current_user_id)
+):
+    """Download a document from Blob Storage."""
+    # Security: Ensure user only downloads their own blobs
+    if not blob_name.startswith(f"{user_id}/"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    
+    try:
+        content = await blob_service.download_document(blob_name)
+        return Response(
+            content=content,
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": f"attachment; filename={blob_name.split('/')[-1]}"}
+        )
+    except Exception:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
-    blob_name = metadata.get("blob_name")
-    if blob_name:
-        try:
-            await blob_service.delete_document(blob_name)
-        except Exception:
-            pass
+
+@router.delete("/{blob_name:path}", status_code=status.HTTP_200_OK)
+async def delete_document(
+    blob_name: str,
+    user_id: str = Depends(get_current_user_id)
+):
+    """Delete a document from Blob Storage."""
+    if not blob_name.startswith(f"{user_id}/"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     try:
-        await search_service.delete_document_chunks(document_id)
+        await blob_service.delete_document(blob_name)
+        return {"status": "deleted", "blob_name": blob_name}
     except Exception:
-        pass
-
-    await cosmos_service.delete_document_metadata(document_id, user_id)
-    return {"status": "deleted"}
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
