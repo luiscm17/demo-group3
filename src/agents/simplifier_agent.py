@@ -1,16 +1,11 @@
-from src.agents.providers.azure_ai_project import AIProjectProvider
+# agents/simplifier_agent.py
+from src.agents.providers.azure_responses_provider import AzureResponsesAgent
 
-class SimplifierAgent:
-    def __init__(self, agent):
-        self.agent = agent
+class SimplifierAgent(AzureResponsesAgent):
+    """Simplifica textos difíciles para personas con TDH."""
 
-    async def run(self, task: str):
-        result = await self.agent.run(task)
-        return result.text if hasattr(result, "text") else result
+    def __init__(self, **kwargs):
 
-async def simplifier_agent(provider: AIProjectProvider):
-    agent = await provider.build(
-        name="SimplifierAgent",
         instructions="""
             ROLE:
 You are an educational content simplification agent specialized in supporting K12 students, including neurodivergent learners such as ADHD, Autism Spectrum Disorder (ASD), and Dyslexia.
@@ -102,7 +97,9 @@ TONE:
 
 FINAL RULE:
 Always prioritize clarity, cognitive accessibility, and student understanding over linguistic complexity.
-        """,
-    )
-    return SimplifierAgent(agent)
-
+"""
+        super().__init__(
+            name="SimplifierAgent",
+            instructions=instructions,
+            **kwargs
+        )
