@@ -19,16 +19,16 @@ from src.config.settings import AgentSettings
 class AIProjectProvider(BaseAgentProvider):
     """
     Provider for creating versioned agents using Azure AI Projects SDK.
-    
+
     Agents are stored in Azure AI Foundry with explicit versioning.
     Each agent update creates a new version (v1.0, v2.0, etc.).
-    
+
     Architecture:
         AIProjectClient → create_version() → PromptAgentDefinition
                               ↓
                          Immutable version
                          (audit trail)
-    
+
     Example:
         provider = AzureAIProjectProvider()
         agent = await provider.build(
@@ -55,7 +55,7 @@ class AIProjectProvider(BaseAgentProvider):
 
         Returns:
             Configured agent instance.
-            
+
         Raises:
             Exception: If agent creation fails in Azure AI service.
         """
@@ -77,7 +77,14 @@ class AIProjectProvider(BaseAgentProvider):
 
             # This uses AzureAIProjectAgentProvider which wraps the versioned agent
             from agent_framework.azure import AzureAIProjectAgentProvider
+
             provider = AzureAIProjectAgentProvider(project_client=project_client)
             agent = provider.as_agent(created_agent)
 
             return agent
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        return False

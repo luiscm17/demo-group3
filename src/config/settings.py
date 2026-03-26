@@ -32,7 +32,7 @@ class AgentSettings:
     def get_project_endpoint(cls) -> str:
         endpoint = cls._AZURE_AI_PROJECT_ENDPOINT
         if not endpoint:
-            raise ValueError("AI_PROJECT_ENDPOINT is not configured")
+            raise ValueError("AZURE_AI_PROJECT_ENDPOINT is not configured")
         assert isinstance(endpoint, str)
         return endpoint
 
@@ -40,7 +40,7 @@ class AgentSettings:
     def get_model_deployment_name(cls) -> str:
         model = cls._AZURE_AI_MODEL_DEPLOYMENT_NAME
         if not model:
-            raise ValueError("AI_MODEL_DEPLOYMENT_NAME is not configured")
+            raise ValueError("AZURE_AI_MODEL_DEPLOYMENT_NAME is not configured")
         assert isinstance(model, str)
         return model
 
