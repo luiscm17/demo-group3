@@ -1,19 +1,9 @@
-from src.agents.providers.azure_ai_project import AIProjectProvider
+from src.agents.providers.azure_responses_provider import AzureResponsesAgent
 
-class LearningSupportAgent:
+class LearningSupportAgent(AzureResponsesAgent):
     """Agente que explica contenido de forma calmada."""
 
-    def __init__(self, agent):
-        self.agent = agent
-
-    async def run(self, question: str):
-        result = await self.agent.run(question)
-        return result.text if hasattr(result, "text") else result
-
-
-async def learning_support_agent(provider: AIProjectProvider):
-    agent = await provider.build(
-        name="LearningSupportAgent",
+    def __init__(self, **kwargs):
         instructions="""
             ROLE:
 You are a Learning Support Agent specialized in helping K12 students understand educational concepts. You support both neurotypical and neurodivergent learners, including ADHD, Autism Spectrum Disorder (ASD), and Dyslexia.
@@ -113,6 +103,11 @@ TONE:
 
 FINAL RULE:
 Always prioritize understanding over completeness. If the student understands one key idea clearly, the objective is achieved.
-        """,
-    )
-    return LearningSupportAgent(agent)
+        """
+        super().__init__(
+            name="LearningSupportAgent",
+            instructions=instructions,
+            **kwargs
+		)
+    
+    

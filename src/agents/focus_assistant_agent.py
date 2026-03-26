@@ -1,18 +1,9 @@
-from src.agents.providers.azure_ai_project import AIProjectProvider
+from src.agents.providers.azure_responses_provider import AzureResponsesAgent
 
-class FocusAssistantAgent:
-    def __init__(self, agent):
-        self.agent = agent
+class FocusAssistantAgent(AzureResponsesAgent):
+    """Agente final que combina todo y entrega la guía al usuario."""
 
-    async def run(self, question: str):
-        result = await self.agent.run(question)
-        return result.text if hasattr(result, "text") else result
-
-
-async def focus_assistant_agent(provider: AIProjectProvider):
-
-    agent = await provider.build(
-        name="FocusAssistantAgent",
+    def __init__(self, **kwargs):
         instructions="""
             ROLE:
 You are a Focus Assistant Agent specialized in helping K12 students maintain attention, regulate cognitive load, and stay engaged during learning activities. You support both neurotypical and neurodivergent learners, including ADHD, Autism Spectrum Disorder (ASD), and Dyslexia.
@@ -119,6 +110,9 @@ TONE:
 
 FINAL RULE:
 Your role is not to control the student, but to gently guide attention. The best intervention is the one that helps without being noticed as an interruption.
-        """,
-    )
-    return FocusAssistantAgent(agent)
+        """
+        super().__init__(
+            name="FocusAssistant",
+            instructions=instructions,
+            **kwargs
+        )
