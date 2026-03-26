@@ -978,6 +978,7 @@ dependencies = [
     { name = "azure-storage-blob" },
     { name = "dotenv" },
     { name = "pytest" },
+    { name = "redis" },
 ]
 
 [package.metadata]
@@ -988,6 +989,7 @@ requires-dist = [
     { name = "azure-storage-blob", specifier = ">=12.29.0b1" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "pytest", specifier = ">=9.0.2" },
+    { name = "redis", specifier = ">=7.3.0" },
 ]
 
 [[package]]
