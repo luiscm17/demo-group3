@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   getChatComprehension,
   getConceptMap,
@@ -16,6 +17,32 @@ type ChatResultCardProps = {
   chatId: string | null;
   response: ChatResponse;
 };
+
+function resolveVisualUrl(imageUrl?: string | null, path?: string | null) {
+  const candidate = imageUrl || path;
+  if (!candidate) {
+    return null;
+  }
+
+  if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
+    return candidate;
+  }
+
+  if (!path || path.includes("/")) {
+    return null;
+  }
+
+  try {
+    const decoded = atob(path);
+    if (decoded.startsWith("http://") || decoded.startsWith("https://")) {
+      return decoded;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
 
 export default function ChatResultCard({
   chatId,
@@ -113,6 +140,71 @@ export default function ChatResultCard({
             </span>
           ))}
         </div>
+      ) : null}
+
+      {response.visualReferences && response.visualReferences.length > 0 ? (
+        <details className="mt-3 rounded-2xl bg-white/70 p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+            Evidencia visual
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {response.visualReferences.map((reference, index) => (
+              (() => {
+                const visualUrl = resolveVisualUrl(reference.imageUrl, reference.path);
+                return (
+                  <div
+                    key={`${reference.path ?? reference.title ?? "visual"}-${index}`}
+                    className="rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-600"
+                  >
+                    <p className="font-semibold text-slate-800">
+                      {reference.title || "Referencia del documento"}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span className="status-pill">{reference.kind}</span>
+                      {reference.sourceKind ? (
+                        <span className="status-pill">{reference.sourceKind}</span>
+                      ) : null}
+                      {reference.sectionKind ? (
+                        <span className="status-pill">{reference.sectionKind}</span>
+                      ) : null}
+                      {reference.pageNumber ? (
+                        <span className="status-pill">pagina {reference.pageNumber}</span>
+                      ) : null}
+                    </div>
+                    {visualUrl ? (
+                      <a
+                        href={visualUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 block overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                      >
+                        <Image
+                          src={visualUrl}
+                          alt={reference.imageCaption || reference.title || "Evidencia visual"}
+                          width={640}
+                          height={320}
+                          unoptimized
+                          className="h-44 w-full object-cover"
+                        />
+                      </a>
+                    ) : null}
+                    {reference.imageCaption ? (
+                      <p className="mt-2 leading-6 text-slate-700">{reference.imageCaption}</p>
+                    ) : null}
+                    {reference.previewText ? (
+                      <p className="mt-2 leading-6">{reference.previewText}</p>
+                    ) : null}
+                    {reference.path ? (
+                      <p className="mt-2 break-all text-xs text-slate-400">
+                        {reference.path}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })()
+            ))}
+          </div>
+        </details>
       ) : null}
 
       {chatId ? (
