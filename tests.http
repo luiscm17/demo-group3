@@ -52,10 +52,10 @@ Authorization: Bearer {{token}}
 Content-Type: multipart/form-data; boundary=boundary
 
 --boundary
-Content-Disposition: form-data; name="file"; filename="pdf-examen-wellsharp-con-respuestas-2_compress.pdf"
+Content-Disposition: form-data; name="file"; filename="Artificial_Neural_Network_Model_for_Prediction_of_Drilling_Rate.pdf"
 Content-Type: application/pdf
 
-@resource/pdf-examen-wellsharp-con-respuestas-2_compress.pdf
+@resources/Artificial_Neural_Network_Model_for_Prediction_of_Drilling_Rate.pdf
 --boundary--
 
 ### 3.1 Documents: Upload (missing token)
@@ -63,10 +63,10 @@ POST {{host}}/documents
 Content-Type: multipart/form-data; boundary=boundary
 
 --boundary
-Content-Disposition: form-data; name="file"; filename="pdf-well-control-examen_compress.pdf"
+Content-Disposition: form-data; name="file"; filename="Artificial_Neural_Network_Model_for_Prediction_of_Drilling_Rate.pdf"
 Content-Type: application/pdf
 
-@resource/pdf-well-control-examen_compress.pdf
+@resources/Artificial_Neural_Network_Model_for_Prediction_of_Drilling_Rate.pdf
 --boundary--
 
 
