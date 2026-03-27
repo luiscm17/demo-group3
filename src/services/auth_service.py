@@ -15,6 +15,7 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
 def _get_connection() -> sqlite3.Connection:
+    """Create and return a database connection with row factory."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
@@ -33,10 +34,12 @@ with _get_connection() as conn:
 
 
 def _normalize_email(email: str) -> str:
+    """Normalize email address by trimming whitespace and converting to lowercase."""
     return email.strip().lower()
 
 
 def _build_auth_response(user_id: str, email: str, name: str) -> AuthResponse:
+    """Build authentication response with access token and user information."""
     token = create_access_token(user_id)
     return AuthResponse(
         token=token,
@@ -48,6 +51,7 @@ def _build_auth_response(user_id: str, email: str, name: str) -> AuthResponse:
 def _insert_user(
     user_id: str, email: str, name: str, password: str, created_at: str
 ) -> None:
+    """Insert a new user record into the database."""
     with _get_connection() as conn:
         conn.execute(
             "INSERT INTO users (id, email, name, password, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -56,6 +60,7 @@ def _insert_user(
 
 
 def _fetch_user_by_email(email: str) -> sqlite3.Row | None:
+    """Fetch user record from database by email address."""
     with _get_connection() as conn:
         cursor = conn.execute(
             "SELECT id, email, name, password FROM users WHERE email = ?", (email,)
