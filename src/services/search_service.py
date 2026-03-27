@@ -17,6 +17,7 @@ from azure.search.documents.indexes.models import (
     VectorSearchProfile,
 )
 from openai import AsyncAzureOpenAI
+from typing import Any
 
 from src.config.settings import (
     AgenticRagSettings,
@@ -25,6 +26,7 @@ from src.config.settings import (
     LayoutRagSettings,
     OpenAISettings,
     RagV3Settings,
+    AzureOpenAISettings
 )
 from src.services.search.rag_pipeline import run_pipeline
 
@@ -65,11 +67,11 @@ def _classic_embedding_dimensions() -> int:
 async def _get_embedding(text: str, dimensions: int | None = None) -> list[float]:
     """Generate embedding vector for the given text using Azure OpenAI."""
     async with AsyncAzureOpenAI(
-        azure_endpoint=OpenAISettings.ENDPOINT,
+        azure_endpoint=AzureOpenAISettings.get_endpoint(),
         api_key=OpenAISettings.API_KEY,
         api_version="2024-02-01",
     ) as client:
-        request_kwargs = {
+        request_kwargs: dict[str, Any] = {
             "model": OpenAISettings.EMBEDDING_DEPLOYMENT,
             "input": text,
         }
@@ -329,8 +331,9 @@ def _build_visual_reference(result: dict) -> dict | None:
     if image_path:
         normalized_image_path = image_path.lstrip("/")
         if BlobStorageSettings.AZURE_STORAGE_CONTAINER:
+            base_url = BlobStorageSettings.AZURE_BLOB_STORAGE_URL or ""
             image_url = (
-                f"{BlobStorageSettings.AZURE_BLOB_STORAGE_URL.rstrip('/')}/{BlobStorageSettings.AZURE_STORAGE_CONTAINER}/{normalized_image_path}"
+                f"{base_url.rstrip('/')}/{BlobStorageSettings.AZURE_STORAGE_CONTAINER}/{normalized_image_path}"
             )
         elif normalized_image_path.startswith(("http://", "https://")):
             image_url = normalized_image_path
@@ -360,10 +363,10 @@ def _layout_select_fields() -> list[str]:
     if rag_v3_enabled():
         fields.extend(
             [
-                active_settings.IMAGE_PATH_FIELD,
-                active_settings.IMAGE_CAPTION_FIELD,
-                active_settings.SOURCE_KIND_FIELD,
-                active_settings.SECTION_KIND_FIELD,
+                getattr(active_settings, "IMAGE_PATH_FIELD", ""),
+                getattr(active_settings, "IMAGE_CAPTION_FIELD", ""),
+                getattr(active_settings, "SOURCE_KIND_FIELD", ""),
+                getattr(active_settings, "SECTION_KIND_FIELD", ""),
             ]
         )
     return fields

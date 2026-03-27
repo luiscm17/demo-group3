@@ -55,7 +55,7 @@ def _insert_user(
     with _get_connection() as conn:
         conn.execute(
             "INSERT INTO users (id, email, name, password, created_at) VALUES (?, ?, ?, ?, ?)",
-            (user_id, email, name, password, created_at),
+            [user_id, email, name, password, created_at],
         )
 
 
@@ -63,7 +63,7 @@ def _fetch_user_by_email(email: str) -> sqlite3.Row | None:
     """Fetch user record from database by email address."""
     with _get_connection() as conn:
         cursor = conn.execute(
-            "SELECT id, email, name, password FROM users WHERE email = ?", (email,)
+            "SELECT id, email, name, password FROM users WHERE email = ?", [email]
         )
         return cursor.fetchone()
 
