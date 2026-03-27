@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import ChatResultCard from "../../../components/ChatResultCard";
 import type { ChatResponse } from "../../../lib/types";
 
 export default function SharedPage() {
@@ -41,9 +42,8 @@ export default function SharedPage() {
     <section className="studio-panel w-full p-6 md:p-8">
       <span className="eyebrow">Resultado compartido</span>
       <h1 className="display-title mt-5 text-4xl md:text-5xl">lectura adaptada</h1>
-      <p className="mt-6 text-base leading-8 text-slate-700">{data.simplifiedText}</p>
-      <div className="mt-6 rounded-2xl bg-white/70 p-4 text-sm leading-7 text-slate-600">
-        {data.explanation}
+      <div className="mt-6 rounded-[24px] bg-white/70 p-5">
+        <ChatResultCard chatId={null} response={data} />
       </div>
     </section>
   );
