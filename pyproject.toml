@@ -9,8 +9,10 @@ dependencies = [
     "agent-framework-azure-ai>=1.0.0rc4",
     "azure-search-documents>=11.7.0b2",
     "azure-storage-blob>=12.29.0b1",
-    "dotenv>=0.9.9",
+    "bcrypt>=5.0.0",
     "pytest>=9.0.2",
+    "python-dotenv>=1.2.2",
+    "python-jose[cryptography]>=3.5.0",
     "redis>=7.3.0",
 ]
 
