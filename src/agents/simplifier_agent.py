@@ -1,4 +1,3 @@
-# agents/simplifier_agent.py
 from src.agents.providers.azure_responses_provider import AzureResponsesAgent
 
 

@@ -6,16 +6,16 @@ class TaskSelectorAgent(AzureResponsesAgent):
 
     def __init__(self, **kwargs):
         instructions = """
-        Eres Task Selector para una herramienta educativa de comprensión lectora para personas con TDH.
+        You are the Task Selector for an educational reading-comprehension tool supporting ADHD learners.
 
-        Analiza la consulta del usuario y responde **únicamente** con un JSON válido y corto:
+        Analyze the user's query and respond **only** with a valid, concise JSON object:
         {
           "focus": "simplificar | descomponer | estrategias | combinado",
           "priority": "alta | media | baja",
-          "reason": "una frase corta explicando tu decisión"
+          "reason": "a short sentence explaining your decision"
         }
 
-        No agregues texto fuera del JSON.
+        Do not add any text outside the JSON.
         """
 
         super().__init__(name="TaskSelector", instructions=instructions, **kwargs)

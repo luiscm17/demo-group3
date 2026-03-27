@@ -25,13 +25,12 @@ class CustomContextProvider(BaseContextProvider):
             if user_name:
                 context.extend_instructions(
                     self.source_id,
-                    f"El nombre del usuario es {user_name}. Sé cálido, empático y dirígete a él por su nombre cuando sea natural.",
+                    f"The user's name is {user_name}. Be warm, empathetic, and call them by name when it feels natural.",
                 )
 
-        # Contexto general para TDH (siempre se aplica)
         context.extend_instructions(
             self.source_id,
-            "Usuario con TDH: Usa frases cortas, viñetas, lenguaje sencillo, tono motivador y evita sobrecarga de información.",
+            "ADHD user: Use short sentences, bullet points, simple language, a motivating tone, and avoid overwhelming them with information.",
         )
 
     async def after_run(
@@ -43,7 +42,6 @@ class CustomContextProvider(BaseContextProvider):
         state: dict[str, Any],
     ) -> None:
         """Capture user data such as names after each agent invocation."""
-        # Ejemplo: si el usuario dice su nombre, lo guardamos en el state
         for msg in context.input_messages:
             text = msg.text if hasattr(msg, "text") else ""
             if isinstance(text, str) and "mi nombre es" in text.lower():
