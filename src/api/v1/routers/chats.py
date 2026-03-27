@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, status
-
 from src.core.dependencies import get_current_user_id
 from src.models.schemas.chats import ChatMessage, ChatResponse
+
+from src.agents.orchestrator_service import orchestrator_service
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -12,14 +13,26 @@ async def chat_with_agent(
     user_id: str = Depends(get_current_user_id),
 ):
     """
-    Punto de conexión con el agente de IA (en desarrollo).
-    Este endpoint recibirá los mensajes y delegará la lógica al agente.
+    Endpoint principal que usa el OrchestratorAgent para comprensión lectora con TDH.
     """
-    # AQUI SE REALIZARA LA CONEXION CON EL AGENTE
-    # Por ahora, se retorna una respuesta vacía o de marcador de posición.
-    return ChatResponse(
-        simplifiedText="[Agente en desarrollo]",
-        explanation="El sistema de agentes está siendo integrado.",
-        tone="neutral",
-        glossary=[],
-    )
+    try:
+        agent_text = await orchestrator_service.process_message(
+            user_id=user_id,
+            user_message=body.message
+        )
+
+        return ChatResponse(
+            simplifiedText=agent_text,
+            explanation="Respuesta generada por la orquesta educativa especializada en TDH",
+            tone="empático",
+            glossary=[]
+        )
+
+    except Exception as e:
+        print(f"[ERROR] en chat_with_agent: {e}")
+        return ChatResponse(
+            simplifiedText="Lo siento, ocurrió un error inesperado. Por favor, inténtalo de nuevo.",
+            explanation="Error en el procesamiento del agente",
+            tone="neutral",
+            glossary=[]
+        )
