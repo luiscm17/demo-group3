@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+ENVIRONMENT = os.getenv("ENVIRONMENT") or "development"
 
 CORS_ORIGINS: List[str] = [
     origin.strip()
@@ -30,7 +30,9 @@ class AgentSettings:
     """Settings for Azure AI Project agents."""
 
     _AZURE_AI_PROJECT_ENDPOINT: Optional[str] = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
-    _AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME: Optional[str] = os.getenv("AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME")
+    _AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME: Optional[str] = os.getenv(
+        "AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME"
+    )
 
     @classmethod
     def get_project_endpoint(cls) -> str:
@@ -52,11 +54,13 @@ class AgentSettings:
 class AuthSettings:
     """Settings for JWT authentication."""
 
-    SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "change-me-in-production")
-    ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+    SECRET_KEY: str = os.getenv("JWT_SECRET_KEY") or "change-me-in-production"
+    ALGORITHM: str = os.getenv("JWT_ALGORITHM") or "HS256"
     EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
-    ALLOW_INSECURE_DEV_SECRET: bool = os.getenv("ALLOW_INSECURE_DEV_SECRET", "false").lower() == "true"
-    
+    ALLOW_INSECURE_DEV_SECRET: bool = (
+        os.getenv("ALLOW_INSECURE_DEV_SECRET", "false").lower() == "true"
+    )
+
     @classmethod
     def get_secret_key(cls) -> str:
         if cls.SECRET_KEY:
@@ -65,7 +69,6 @@ class AuthSettings:
             return "change-me-in-production"
         else:
             raise ValueError("JWT_SECRET_KEY is not configured for production use")
-    
 
 
 class AuthStorageSettings:
@@ -82,12 +85,16 @@ class AuthStorageSettings:
 class BlobStorageSettings:
     """Settings for Azure Blob Storage."""
 
-    CONNECTION_STRING: Optional[str] = _first_env("AZURE_STORAGE_CONNECTION_STRING")
-    AZURE_STORAGE_CONTAINER: Optional[str] = _first_env(
+    CONNECTION_STRING: str = os.getenv(
+        "AZURE_STORAGE_CONNECTION_STRING", ""
+    )  # validated in validate()
+    AZURE_STORAGE_CONTAINER: str = os.getenv(
         "AZURE_STORAGE_CONTAINER",
         default="documents",
     )
-    AZURE_BLOB_STORAGE_URL: Optional[str] = os.getenv("AZURE_BLOB_STORAGE_URL")
+    AZURE_BLOB_STORAGE_URL: str = os.getenv(
+        "AZURE_STORAGE_ACCOUNT_URL", ""
+    )  # validated in validate()
 
     @classmethod
     def validate(cls) -> None:
@@ -96,7 +103,7 @@ class BlobStorageSettings:
         if not cls.AZURE_STORAGE_CONTAINER:
             raise ValueError("AZURE_STORAGE_CONTAINER is not configured")
         if not cls.AZURE_BLOB_STORAGE_URL:
-            raise ValueError("AZURE_BLOB_STORAGE_URL is not configured")
+            raise ValueError("AZURE_STORAGE_ACCOUNT_URL is not configured")
 
 
 class AISearchSettings:
@@ -326,6 +333,7 @@ class MCPConnectionSettings:
         kb_name = KnowledgeBaseSettings.get_name()
         return f"{search_endpoint}/knowledgebases/{kb_name}/mcp?api-version=2025-11-01-Preview"
 
+
 class RedisSettings:
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
     REDIS_KEY_PREFIX: str = os.getenv("REDIS_KEY_PREFIX", "chat_messages")
@@ -334,7 +342,8 @@ class RedisSettings:
     @classmethod
     def get_redis_url(cls) -> str:
         return cls.REDIS_URL
-    
+
+
 class LayoutRagSettings:
     """Settings for the versioned layout-based RAG ingestion pipeline."""
 
@@ -371,25 +380,23 @@ class LayoutRagSettings:
         if "3-small" in model_name:
             return 1536
         return 1536
-    
+
+
 class OpenAISettings:
     """Settings for Azure OpenAI (embeddings + completions)."""
 
-    ENDPOINT: Optional[str] = _first_env("OPENAI_ENDPOINT", "AOAI_ENDPOINT")
-    API_KEY: Optional[str] = _first_env("OPENAI_API_KEY", "AOAI_KEY")
+    ENDPOINT: Optional[str] = os.getenv("OPENAI_ENDPOINT", "AOAI_ENDPOINT")
+    API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY", "AOAI_KEY")
     EMBEDDING_MODEL: str = (
-        _first_env(
-            "OPENAI_EMBEDDING_MODEL",
+        os.getenv(
             "EMBEDDING_MODEL_NAME",
             default="text-embedding-ada-002",
         )
         or "text-embedding-ada-002"
     )
     EMBEDDING_DEPLOYMENT: str = (
-        _first_env(
-            "OPENAI_EMBEDDING_DEPLOYMENT",
+        os.getenv(
             "EMBEDDING_MODEL_DEPLOYMENT_NAME",
-            "OPENAI_EMBEDDING_MODEL",
             default="text-embedding-ada-002",
         )
         or "text-embedding-ada-002"
@@ -411,22 +418,28 @@ class OpenAISettings:
         or "gpt-4o-mini"
     )
 
+
 class DocumentIntelligenceSettings:
     """Settings for Azure Document Intelligence (Form Recognizer)."""
 
-    DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = os.getenv("DOCUMENT_INTELLIGENCE_ENDPOINT")
+    DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = os.getenv(
+        "DOCUMENT_INTELLIGENCE_ENDPOINT"
+    )
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = os.getenv("DOCUMENT_INTELLIGENCE_KEY")
 
     @classmethod
     def validate(cls) -> None:
         """Ensure both endpoint and key are provided."""
         if not cls.DOCUMENT_INTELLIGENCE_ENDPOINT or not cls.DOCUMENT_INTELLIGENCE_KEY:
-            raise ValueError("DOCUMENT_INTELLIGENCE_ENDPOINT and DOCUMENT_INTELLIGENCE_KEY must be set")
+            raise ValueError(
+                "DOCUMENT_INTELLIGENCE_ENDPOINT and DOCUMENT_INTELLIGENCE_KEY must be set"
+            )
+
 
 class RagV3Settings:
     """Settings for the multimodal-ready rag-v3 extension."""
 
-    ENABLED: bool = (os.getenv("RAG_V3_ENABLED", "false").lower() == "true")
+    ENABLED: bool = os.getenv("RAG_V3_ENABLED", "false").lower() == "true"
     INDEX_NAME: str = os.getenv("RAG_V3_INDEX_NAME", "documents-layout-rag-v3")
     IMAGE_INDEX_NAME: str = os.getenv(
         "RAG_V3_IMAGE_INDEX_NAME",
@@ -459,12 +472,14 @@ class RagV3Settings:
     def embedding_dimensions(cls) -> int:
         return LayoutRagSettings.embedding_dimensions()
 
+
 class AgenticRagSettings:
     """Settings for Azure AI Search knowledge sources and knowledge bases."""
 
     ENABLED: bool = (
         _first_env("AGENTIC_RAG_ENABLED", default="false") or "false"
     ).lower() == "true"
+
 
 # def share_ttl() -> timedelta:
 #     """Return how long public shares remain valid."""
