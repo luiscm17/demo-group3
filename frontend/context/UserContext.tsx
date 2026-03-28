@@ -111,6 +111,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const setAuthSession = (tokenValue: string, user: AuthUser) => {
     window.localStorage.setItem(STORAGE_KEYS.token, tokenValue);
     window.localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(user));
+    window.localStorage.removeItem(STORAGE_KEYS.profile);
     emitStorageChange();
   };
 

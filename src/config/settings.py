@@ -1,72 +1,114 @@
-"""Application settings loaded from environment variables.
-
-Uses dotenv to load configuration from .env files for local development
-and environment variables in production deployments.
-"""
+"""Application settings loaded from environment variables."""
 
 import os
-from typing import Optional
+from pathlib import Path
+from typing import Optional, List
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+ENVIRONMENT = os.getenv("ENVIRONMENT") or "development"
+
+CORS_ORIGINS: List[str] = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+
+def _first_env(*names: str, default: Optional[str] = None) -> Optional[str]:
+    """Return the first non-empty environment variable from a list of aliases."""
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return default
 
 
 class AgentSettings:
-    """Settings for Azure AI Project agents.
+    """Settings for Azure AI Project agents."""
 
-    Manages configuration for Azure AI Foundry endpoints and model
-    deployments. Values are loaded from environment variables.
-
-    Environment variables:
-        AI_PROJECT_ENDPOINT: Azure AI Project endpoint URL.
-        AI_MODEL_DEPLOYMENT_NAME: Name of the deployed model.
-    """
-
-    _AI_PROJECT_ENDPOINT: Optional[str] = os.getenv("AI_PROJECT_ENDPOINT")
-    _AI_MODEL_DEPLOYMENT_NAME: Optional[str] = os.getenv("AI_MODEL_DEPLOYMENT_NAME")
+    _AZURE_AI_PROJECT_ENDPOINT: Optional[str] = os.getenv("AZURE_AI_PROJECT_ENDPOINT")
+    _AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME: Optional[str] = os.getenv(
+        "AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME"
+    )
 
     @classmethod
     def get_project_endpoint(cls) -> str:
-        endpoint = cls._AI_PROJECT_ENDPOINT
+        endpoint = cls._AZURE_AI_PROJECT_ENDPOINT
         if not endpoint:
-            raise ValueError("AI_PROJECT_ENDPOINT is not configured")
+            raise ValueError("AZURE_AI_PROJECT_ENDPOINT is not configured")
         assert isinstance(endpoint, str)
         return endpoint
 
     @classmethod
     def get_model_deployment_name(cls) -> str:
-        model = cls._AI_MODEL_DEPLOYMENT_NAME
+        model = cls._AZURE_OPENAI_RESPONSES_DEPLOYMENT_NAME
         if not model:
-            raise ValueError("AI_MODEL_DEPLOYMENT_NAME is not configured")
+            raise ValueError("AZURE_AI_MODEL_DEPLOYMENT_NAME is not configured")
         assert isinstance(model, str)
         return model
 
 
-class BlobStorageSettings:
-    """Settings for Azure Blob Storage.
+class AuthSettings:
+    """Settings for JWT authentication."""
 
-    Manages connection strings and container names for document
-    storage operations.
-
-    Environment variables:
-        AZURE_STORAGE_CONNECTION_STRING: Storage account connection string.
-        AZURE_STORAGE_CONTAINER: Name of the blob container.
-    """
-
-    AZURE_STORAGE_CONNECTION_STRING: Optional[str] = os.getenv(
-        "AZURE_STORAGE_CONNECTION_STRING"
+    SECRET_KEY: str = os.getenv("JWT_SECRET_KEY") or "change-me-in-production"
+    ALGORITHM: str = os.getenv("JWT_ALGORITHM") or "HS256"
+    EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
+    ALLOW_INSECURE_DEV_SECRET: bool = (
+        _first_env(
+            "ALLOW_INSECURE_DEV_SECRET",
+            "ALLOW_INSECURE_DEV_JWT",
+            default="false",
+        ).lower()
+        == "true"
     )
-    AZURE_STORAGE_CONTAINER: Optional[str] = os.getenv("AZURE_STORAGE_CONTAINER")
+
+    @classmethod
+    def get_secret_key(cls) -> str:
+        if cls.SECRET_KEY:
+            return cls.SECRET_KEY
+        if cls.ALLOW_INSECURE_DEV_SECRET == "development":
+            return "change-me-in-production"
+        else:
+            raise ValueError("JWT_SECRET_KEY is not configured for production use")
+
+
+class AuthStorageSettings:
+    """Settings for simple user storage used during authentication."""
+
+    DB_PATH: str = os.getenv("AUTH_DB_PATH", "data/users.db")
+
+    @classmethod
+    def get_db_path(cls) -> Path:
+        path = Path(cls.DB_PATH)
+        return path if path.is_absolute() else Path.cwd() / path
+
+
+class BlobStorageSettings:
+    """Settings for Azure Blob Storage."""
+
+    CONNECTION_STRING: str = os.getenv(
+        "AZURE_STORAGE_CONNECTION_STRING", ""
+    )  # validated in validate()
+    AZURE_STORAGE_CONTAINER: str = os.getenv(
+        "AZURE_STORAGE_CONTAINER",
+        default="documents",
+    )
+    AZURE_BLOB_STORAGE_URL: str = os.getenv(
+        "AZURE_STORAGE_ACCOUNT_URL", ""
+    )  # validated in validate()
 
     @classmethod
     def validate(cls) -> None:
-        if not cls.AZURE_STORAGE_CONNECTION_STRING:
+        if not cls.CONNECTION_STRING:
             raise ValueError("AZURE_STORAGE_CONNECTION_STRING is not configured")
         if not cls.AZURE_STORAGE_CONTAINER:
             raise ValueError("AZURE_STORAGE_CONTAINER is not configured")
+        if not cls.AZURE_BLOB_STORAGE_URL:
+            raise ValueError("AZURE_STORAGE_ACCOUNT_URL is not configured")
 
 
 class AISearchSettings:
@@ -164,12 +206,22 @@ class AzureOpenAISettings:
             raise ValueError("AOAI_DEPLOYMENT_NAME is not configured")
         return embedding_model_name
 
+    @classmethod
+    def chat_completions_uri(cls, deployment_name: Optional[str] = None) -> str:
+        if not cls._AOAI_ENDPOINT:
+            raise ValueError("AOAI_ENDPOINT is not configured")
+        deployment = deployment_name or cls.get_deployment_name()
+        return (
+            f"{cls._AOAI_ENDPOINT.rstrip('/')}/openai/deployments/{deployment}/chat/completions"
+            "?api-version=2024-02-01"
+        )
+
 
 class KnowledgeSourceSettings:
     """Centralized settings for the default knowledge source."""
 
     _KS_DEFAULT_NAME = "ks-name-default"
-    _KS_DEFAULT_DESCRIPTION = "Knowledge Source automática desde Blob con mi PDF"
+    _KS_DEFAULT_DESCRIPTION = "Knowledge Source description default"
     _KS_NAME: Optional[str] = os.getenv("KNOWLEDGE_SOURCE_NAME")
     _KS_DESCRIPTION: Optional[str] = os.getenv("KNOWLEDGE_SOURCE_DESCRIPTION")
 
@@ -285,3 +337,193 @@ class MCPConnectionSettings:
         search_endpoint = AISearchSettings.get_endpoint()
         kb_name = KnowledgeBaseSettings.get_name()
         return f"{search_endpoint}/knowledgebases/{kb_name}/mcp?api-version=2025-11-01-Preview"
+
+
+class RedisSettings:
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
+    REDIS_KEY_PREFIX: str = os.getenv("REDIS_KEY_PREFIX", "chat_messages")
+    REDIS_PORT: int = 6379
+
+    @classmethod
+    def get_redis_url(cls) -> str:
+        return cls.REDIS_URL
+
+
+class LayoutRagSettings:
+    """Settings for the versioned layout-based RAG ingestion pipeline."""
+
+    ENABLED: bool = os.getenv("LAYOUT_RAG_ENABLED", "false").lower() == "true"
+    INDEX_NAME: str = os.getenv("LAYOUT_RAG_INDEX_NAME", "documents-layout-rag-v2")
+    DATASOURCE_NAME: str = os.getenv(
+        "LAYOUT_RAG_DATASOURCE_NAME",
+        "documents-layout-rag-v2-datasource",
+    )
+    SKILLSET_NAME: str = os.getenv(
+        "LAYOUT_RAG_SKILLSET_NAME",
+        "documents-layout-rag-v2-skillset",
+    )
+    INDEXER_NAME: str = os.getenv(
+        "LAYOUT_RAG_INDEXER_NAME",
+        "documents-layout-rag-v2-indexer",
+    )
+    MAX_CHUNK_LENGTH: int = int(os.getenv("LAYOUT_RAG_MAX_CHUNK_LENGTH", "2000"))
+    OVERLAP_LENGTH: int = int(os.getenv("LAYOUT_RAG_OVERLAP_LENGTH", "200"))
+    ENABLE_IMAGE_REFERENCES: bool = (
+        os.getenv("LAYOUT_RAG_ENABLE_IMAGE_REFERENCES", "true").lower() == "true"
+    )
+    CONTENT_FIELD: str = os.getenv("LAYOUT_RAG_CONTENT_FIELD", "content")
+    VECTOR_FIELD: str = os.getenv("LAYOUT_RAG_VECTOR_FIELD", "content_vector")
+    TITLE_FIELD: str = os.getenv("LAYOUT_RAG_TITLE_FIELD", "document_title")
+    PATH_FIELD: str = os.getenv("LAYOUT_RAG_PATH_FIELD", "metadata_storage_path")
+    PAGE_FIELD: str = os.getenv("LAYOUT_RAG_PAGE_FIELD", "page_number")
+
+    @classmethod
+    def embedding_dimensions(cls) -> int:
+        model_name = (OpenAISettings.EMBEDDING_MODEL or "").lower()
+        if "3-large" in model_name:
+            return 3072
+        if "3-small" in model_name:
+            return 1536
+        return 1536
+
+
+class OpenAISettings:
+    """Settings for Azure OpenAI (embeddings + completions)."""
+
+    ENDPOINT: Optional[str] = _first_env("OPENAI_ENDPOINT", "AOAI_ENDPOINT")
+    API_KEY: Optional[str] = _first_env("OPENAI_API_KEY", "AOAI_KEY")
+    EMBEDDING_MODEL: str = (
+        _first_env(
+            "OPENAI_EMBEDDING_MODEL",
+            "EMBEDDING_MODEL_NAME",
+            default="text-embedding-ada-002",
+        )
+        or "text-embedding-ada-002"
+    )
+    EMBEDDING_DEPLOYMENT: str = (
+        _first_env(
+            "OPENAI_EMBEDDING_DEPLOYMENT",
+            "EMBEDDING_MODEL_DEPLOYMENT_NAME",
+            "OPENAI_EMBEDDING_MODEL",
+            default="text-embedding-ada-002",
+        )
+        or "text-embedding-ada-002"
+    )
+    CHAT_MODEL: str = (
+        _first_env(
+            "AI_MODEL_DEPLOYMENT_NAME",
+            "AOAI_DEPLOYMENT_NAME",
+            default="gpt-4o-mini",
+        )
+        or "gpt-4o-mini"
+    )
+    MODEL_NAME: str = (
+        _first_env(
+            "OPENAI_MODEL_NAME",
+            "AI_MODEL_NAME",
+            default="gpt-4o-mini",
+        )
+        or "gpt-4o-mini"
+    )
+
+    VISION_DEPLOYMENT: str = (
+        _first_env(
+            "OPENAI_VISION_DEPLOYMENT",
+            "RAG_V3_VISION_DEPLOYMENT",
+            "AI_MODEL_DEPLOYMENT_NAME",
+            "AOAI_DEPLOYMENT_NAME",
+            default="gpt-4o-mini",
+        )
+        or "gpt-4o-mini"
+    )
+
+
+class DocumentIntelligenceSettings:
+    """Settings for Azure Document Intelligence (Form Recognizer)."""
+
+    DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = os.getenv(
+        "DOCUMENT_INTELLIGENCE_ENDPOINT"
+    )
+    DOCUMENT_INTELLIGENCE_KEY: Optional[str] = os.getenv("DOCUMENT_INTELLIGENCE_KEY")
+
+    @classmethod
+    def validate(cls) -> None:
+        """Ensure both endpoint and key are provided."""
+        if not cls.DOCUMENT_INTELLIGENCE_ENDPOINT or not cls.DOCUMENT_INTELLIGENCE_KEY:
+            raise ValueError(
+                "DOCUMENT_INTELLIGENCE_ENDPOINT and DOCUMENT_INTELLIGENCE_KEY must be set"
+            )
+
+class ProcessingTriggerSettings:
+    """Settings for decoupled document processing triggers."""
+
+    MODE: str = (_first_env("PROCESSING_TRIGGER_MODE", default="inline") or "inline").strip().lower()
+    FUNCTION_URL: Optional[str] = _first_env(
+        "PROCESSING_FUNCTION_URL",
+        "AZURE_FUNCTION_PROCESSING_URL",
+    )
+    SHARED_SECRET: Optional[str] = _first_env(
+        "PROCESSING_FUNCTION_SECRET",
+        "AZURE_FUNCTION_PROCESSING_SECRET",
+    )
+    TIMEOUT_SECONDS: int = int(
+        _first_env("PROCESSING_TRIGGER_TIMEOUT_SECONDS", default="15") or "15"
+    )
+
+    @classmethod
+    def use_azure_function(cls) -> bool:
+        return cls.MODE == "azure_function"
+
+    @classmethod
+    def validate_function_mode(cls) -> None:
+        if not cls.FUNCTION_URL:
+            raise ValueError("PROCESSING_FUNCTION_URL is not configured")
+
+class RagV3Settings:
+    """Settings for the multimodal-ready rag-v3 extension."""
+
+    ENABLED: bool = os.getenv("RAG_V3_ENABLED", "false").lower() == "true"
+    INDEX_NAME: str = os.getenv("RAG_V3_INDEX_NAME", "documents-layout-rag-v3")
+    IMAGE_INDEX_NAME: str = os.getenv(
+        "RAG_V3_IMAGE_INDEX_NAME",
+        "documents-layout-rag-v3-images",
+    )
+    DATASOURCE_NAME: str = os.getenv(
+        "RAG_V3_DATASOURCE_NAME",
+        "documents-layout-rag-v3-datasource",
+    )
+    SKILLSET_NAME: str = os.getenv(
+        "RAG_V3_SKILLSET_NAME",
+        "documents-layout-rag-v3-skillset",
+    )
+    INDEXER_NAME: str = os.getenv(
+        "RAG_V3_INDEXER_NAME",
+        "documents-layout-rag-v3-indexer",
+    )
+    CONTENT_FIELD: str = os.getenv("RAG_V3_CONTENT_FIELD", "content")
+    VECTOR_FIELD: str = os.getenv("RAG_V3_VECTOR_FIELD", "content_vector")
+    IMAGE_VECTOR_FIELD: str = os.getenv("RAG_V3_IMAGE_VECTOR_FIELD", "image_vector")
+    TITLE_FIELD: str = os.getenv("RAG_V3_TITLE_FIELD", "document_title")
+    PATH_FIELD: str = os.getenv("RAG_V3_PATH_FIELD", "metadata_storage_path")
+    PAGE_FIELD: str = os.getenv("RAG_V3_PAGE_FIELD", "page_number")
+    IMAGE_PATH_FIELD: str = os.getenv("RAG_V3_IMAGE_PATH_FIELD", "image_path")
+    IMAGE_CAPTION_FIELD: str = os.getenv("RAG_V3_IMAGE_CAPTION_FIELD", "image_caption")
+    SOURCE_KIND_FIELD: str = os.getenv("RAG_V3_SOURCE_KIND_FIELD", "source_kind")
+    SECTION_KIND_FIELD: str = os.getenv("RAG_V3_SECTION_KIND_FIELD", "section_kind")
+
+    @classmethod
+    def embedding_dimensions(cls) -> int:
+        return LayoutRagSettings.embedding_dimensions()
+
+
+class AgenticRagSettings:
+    """Settings for Azure AI Search knowledge sources and knowledge bases."""
+
+    ENABLED: bool = (
+        _first_env("AGENTIC_RAG_ENABLED", default="false") or "false"
+    ).lower() == "true"
+
+
+# def share_ttl() -> timedelta:
+#     """Return how long public shares remain valid."""
+#     return timedelta(hours=CosmosDBSettings.SHARE_TTL_HOURS)

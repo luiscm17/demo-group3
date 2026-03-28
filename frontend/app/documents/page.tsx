@@ -12,6 +12,7 @@ import {
 } from "../../lib/api";
 import type { DocumentItem, DocumentUploadResult } from "../../lib/types";
 import { useUser } from "../../context/UserContext";
+import { getPaletteLabel, readExperienceDraft } from "../../lib/profile";
 
 export default function Documents() {
   const router = useRouter();
@@ -22,6 +23,58 @@ export default function Documents() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const paletteLabel = getPaletteLabel(readExperienceDraft().palettePreference);
+
+  const loadDocuments = async (preserveLoadingState = false) => {
+    if (!preserveLoadingState) {
+      setLoadingDocuments(true);
+    }
+
+    try {
+      const nextDocuments = await listDocuments();
+      setDocuments(nextDocuments);
+      setResult((currentResult) => {
+        if (!currentResult) {
+          return currentResult;
+        }
+
+        const refreshedDocument = nextDocuments.find(
+          (document) => document.documentId === currentResult.documentId,
+        );
+
+        return refreshedDocument
+          ? { ...currentResult, status: refreshedDocument.status }
+          : currentResult;
+      });
+    } catch {
+      setError("No fue posible cargar tus documentos.");
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
+  const pipelineSteps = [
+    {
+      title: "Documento recibido",
+      description: "El archivo entra al flujo de procesamiento.",
+      state: result ? "done" : uploading ? "active" : "idle",
+    },
+    {
+      title: "Extraccion y grounding",
+      description: "Se prepara el contenido para consultas posteriores.",
+      state:
+        result?.status === "processing"
+          ? "active"
+          : result?.status === "completed"
+            ? "done"
+            : "idle",
+    },
+    {
+      title: "Listo para chat",
+      description: "El agente podra responder usando el documento como contexto.",
+      state: result?.status === "completed" ? "done" : "idle",
+    },
+  ] as const;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -35,21 +88,26 @@ export default function Documents() {
   }, [isAuthenticated, profile, router]);
 
   useEffect(() => {
-    async function loadDocuments() {
-      try {
-        const nextDocuments = await listDocuments();
-        setDocuments(nextDocuments);
-      } catch {
-        setError("No fue posible cargar tus documentos.");
-      } finally {
-        setLoadingDocuments(false);
-      }
-    }
-
     if (isAuthenticated && profile) {
       void loadDocuments();
     }
   }, [isAuthenticated, profile]);
+
+  useEffect(() => {
+    const hasProcessingDocuments =
+      result?.status === "processing" ||
+      documents.some((document) => document.status === "processing");
+
+    if (!hasProcessingDocuments) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void loadDocuments(true);
+    }, 12000);
+
+    return () => window.clearInterval(intervalId);
+  }, [documents, result]);
 
   const handleUpload = async () => {
     if (!file) {
@@ -74,9 +132,9 @@ export default function Documents() {
     }
   };
 
-  const handleDelete = async (documentId: string) => {
+  const handleDelete = async (documentId: string, blobName?: string) => {
     try {
-      await deleteDocument(documentId);
+      await deleteDocument(documentId, blobName);
       setDocuments((currentDocuments) =>
         currentDocuments.filter((document) => document.documentId !== documentId),
       );
@@ -94,14 +152,14 @@ export default function Documents() {
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="studio-panel w-full p-6 md:p-8"
+      className="studio-panel hero-grid w-full p-6 md:p-8"
     >
       <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         <motion.div
           initial={{ opacity: 0, x: -18 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.08, duration: 0.4 }}
-          className="rounded-[28px] bg-[rgba(255,255,255,0.62)] p-6 md:p-7"
+          className="dark-studio-panel rounded-[28px] p-6 text-white md:p-7"
         >
           <span className="eyebrow">Document intake</span>
           <h1 className="display-title mt-5 text-5xl md:text-6xl">
@@ -109,59 +167,76 @@ export default function Documents() {
             <br />
             el contexto
           </h1>
-          <p className="muted-copy mt-5 max-w-xl text-base leading-7">
-            Sube un PDF o Word y deja listo el material para mostrar
-            simplificacion, grounding y adaptacion a lectura accesible.
+          <p className="reading-copy mt-5 text-base leading-8 text-white/84">
+            Sube un PDF o Word y deja listo el material para demostrar como la
+            lectura mejora cuando el texto tiene contexto real.
           </p>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <div className="tone-card">
-              <p className="text-sm font-semibold text-slate-800">Acepta</p>
-              <p className="mt-2 text-sm text-slate-600">PDF, DOC y DOCX</p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <span className="status-pill border-white/10 bg-white/10 text-white">
+              {paletteLabel}
+            </span>
+            <span className="status-pill border-white/10 bg-white/10 text-white">
+              Ingesta lista para chat
+            </span>
+            <span className="status-pill border-white/10 bg-white/10 text-white">
+              Frontend sin tocar backend
+            </span>
+          </div>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <div className="reading-card">
+              <p className="text-sm font-semibold text-white">Acepta</p>
+              <p className="mt-2 text-sm text-white/72">PDF, DOC, DOCX y TXT</p>
             </div>
-            <div className="tone-card">
-              <p className="text-sm font-semibold text-slate-800">Destino</p>
-              <p className="mt-2 text-sm text-slate-600">Pipeline de documentos</p>
-            </div>
-            <div className="tone-card">
-              <p className="text-sm font-semibold text-slate-800">Salida</p>
-              <p className="mt-2 text-sm text-slate-600">Estado listo para chat</p>
+            <div className="reading-card">
+              <p className="text-sm font-semibold text-white">Salida</p>
+              <p className="mt-2 text-sm text-white/72">Estado listo para chat</p>
             </div>
           </div>
 
-          <div className="mt-8 rounded-[24px] bg-white/70 p-5">
+          <div className="mt-8 rounded-[24px] border border-white/12 bg-white/8 p-5">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+              <p className="text-sm font-semibold uppercase tracking-[0.14em] text-white/56">
                 Documentos cargados
               </p>
-              <span className="status-pill">{documents.length} items</span>
+              <span className="status-pill border-white/10 bg-white/10 text-white">
+                {documents.length} items
+              </span>
             </div>
 
             <div className="mt-4 space-y-3">
               {loadingDocuments ? (
-                <p className="text-sm text-slate-500">Cargando documentos...</p>
+                <div className="space-y-3">
+                  {[0, 1, 2].map((item) => (
+                    <div key={item} className="reading-card">
+                      <div className="skeleton-block h-4 w-44" />
+                      <div className="mt-3 skeleton-block h-3 w-24" />
+                    </div>
+                  ))}
+                </div>
               ) : documents.length === 0 ? (
-                <p className="text-sm leading-6 text-slate-500">
-                  Aun no hay documentos. Cuando conectes backend, aqui debe
-                  venir `GET /documents`.
+                <p className="text-sm leading-6 text-white/66">
+                  Aun no hay documentos. Sube uno largo, tecnico o visual para
+                  que el cambio se note mejor en la demo.
                 </p>
               ) : (
                 documents.map((document) => (
                   <div
                     key={document.documentId}
-                    className="flex items-center justify-between rounded-2xl border border-[rgba(23,49,59,0.08)] bg-white px-4 py-3"
+                    className="flex items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/7 px-4 py-3"
                   >
                     <div>
-                      <p className="font-semibold text-slate-800">
+                      <p className="font-semibold text-white">
                         {document.filename}
                       </p>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-white/66">
                         Estado: {document.status}
                       </p>
                     </div>
                     <button
-                      onClick={() => handleDelete(document.documentId)}
-                      className="secondary-button px-4 py-2 text-sm"
+                      onClick={() => handleDelete(document.documentId, document.blobName)}
+                      className="secondary-button border-white/10 bg-white/10 px-4 py-2 text-sm text-white"
                     >
                       Eliminar
                     </button>
@@ -171,33 +246,12 @@ export default function Documents() {
             </div>
           </div>
 
-          <div className="mt-8 rounded-[24px] bg-[rgba(255,250,242,0.78)] p-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-              Pipeline de demo
+          <div className="mt-8 rounded-[24px] border border-white/12 bg-white/8 p-5">
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-white/56">
+              Estado del procesamiento
             </p>
             <div className="mt-4">
-              <PipelineTimeline
-                steps={[
-                  {
-                    title: "Documento recibido",
-                    description:
-                      "El archivo entra al flujo de procesamiento.",
-                    state: result ? "done" : "active",
-                  },
-                  {
-                    title: "Extraccion y grounding",
-                    description:
-                      "Se prepara el contenido para consultas posteriores.",
-                    state: result ? "active" : "idle",
-                  },
-                  {
-                    title: "Listo para chat",
-                    description:
-                      "El agente podra responder usando el documento como contexto.",
-                    state: result ? "idle" : "idle",
-                  },
-                ]}
-              />
+              <PipelineTimeline steps={[...pipelineSteps]} />
             </div>
           </div>
         </motion.div>
@@ -206,24 +260,24 @@ export default function Documents() {
           initial={{ opacity: 0, x: 18 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.14, duration: 0.4 }}
-          className="rounded-[28px] bg-[linear-gradient(180deg,rgba(255,250,242,0.96),rgba(250,244,232,0.82))] p-6 md:p-7"
+          className="rounded-[28px] border border-white/12 bg-[rgba(13,19,28,0.86)] p-6 md:p-7"
         >
           <div className="flex items-center justify-between">
             <span className="eyebrow">Carga</span>
-            <span className="status-pill">Nivel {profile.readingLevel}</span>
+            <span className="status-pill">{paletteLabel} - Nivel {profile.readingLevel}</span>
           </div>
 
-          <div className="mt-8 rounded-[24px] border border-dashed border-[rgba(13,122,116,0.24)] bg-[rgba(213,235,225,0.26)] p-5">
-            <p className="text-lg font-semibold text-slate-800">
+          <div className="mt-8 rounded-[24px] border border-dashed border-[rgba(76,226,244,0.3)] bg-[rgba(76,226,244,0.08)] p-5">
+            <p className="text-lg font-semibold text-white">
               Arrastra o selecciona un archivo
             </p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Si vas a hacer una demo, usa un documento largo o denso para que
-              el antes y despues sea mas evidente.
+            <p className="reading-copy mt-2 text-sm leading-7 text-white/76">
+              Para una demo mas fuerte, usa un documento largo, tecnico o con
+              imagenes para que el cambio de tono, estructura y lectura se note mejor.
             </p>
 
             <input
-              accept=".pdf,.doc,.docx"
+              accept=".pdf,.doc,.docx,.txt"
               className="app-input mt-5"
               type="file"
               onChange={(e) => {
@@ -235,26 +289,26 @@ export default function Documents() {
           </div>
 
           {file ? (
-            <div className="mt-4 rounded-2xl bg-white/80 p-4 text-sm text-slate-700">
+            <div className="mt-4 rounded-2xl border border-white/12 bg-white/8 p-4 text-sm text-white/78">
               Archivo seleccionado: <span className="font-semibold">{file.name}</span>
             </div>
           ) : null}
 
           {error ? (
-            <div className="mt-4 rounded-2xl bg-[rgba(222,123,89,0.14)] p-4 text-sm text-[#96472f]">
+            <div className="mt-4 rounded-2xl border border-[rgba(255,125,108,0.22)] bg-[rgba(255,125,108,0.12)] p-4 text-sm text-[#ffd2cb]">
               {error}
             </div>
           ) : null}
 
           {result ? (
-            <div className="mt-4 rounded-2xl bg-[rgba(13,122,116,0.12)] p-4 text-sm text-[var(--teal-deep)]">
+            <div className="mt-4 rounded-2xl border border-[rgba(76,226,244,0.2)] bg-[rgba(76,226,244,0.1)] p-4 text-sm text-white/84">
               Documento {result.filename} enviado. Estado actual: {result.status}.
             </div>
           ) : null}
 
           <div className="mt-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-              Vista previa del valor
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-white/60">
+              Asi se vera la lectura
             </p>
             <div className="mt-4">
               <BeforeAfterPreview
@@ -275,10 +329,10 @@ export default function Documents() {
             </button>
 
             <button
-              onClick={() => router.push("/chat")}
+              onClick={() => router.push("/chat?demo=1")}
               className="secondary-button"
             >
-              Ir al chat
+              Abrir chat guiado
             </button>
           </div>
         </motion.div>

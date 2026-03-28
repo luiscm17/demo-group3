@@ -1,48 +1,35 @@
-"""Service to configure and provide Azure SearchIndexClient and index name."""
+"""Service to configure Azure AI Search management clients."""
 
-from azure.identity import DefaultAzureCredential
-from azure.search.documents.indexes import SearchIndexClient
+from azure.core.credentials import AzureKeyCredential
+from azure.search.documents.indexes import SearchIndexClient, SearchIndexerClient
 
 from src.config.settings import AISearchSettings
 
 
 class SearchIndexService:
-    """
-    Wrapper for Azure SearchIndexClient setup and retrieval along with index name.
-    """
+    """Wrapper for the Azure AI Search index management client."""
 
     def __init__(self) -> None:
-        """
-        Initialize the SearchIndexService using settings from AISearchSettings.
-
-        Raises:
-            ValueError: If settings are not properly configured.
-        """
+        """Initialize the SearchIndexService with Azure AI Search clients."""
         AISearchSettings.validate()
-        ai_search_endpoint = AISearchSettings.get_endpoint()
-        ai_search_api_key = AISearchSettings.get_api_key()
-        index_name = AISearchSettings.get_index_name()
-
-        self._client_index = SearchIndexClient(
-            endpoint=ai_search_endpoint,
-            credential=DefaultAzureCredential(),
+        credential = AzureKeyCredential(AISearchSettings.get_api_key())
+        self._client = SearchIndexClient(
+            endpoint=AISearchSettings.get_endpoint(),
+            credential=credential,
         )
-        self._index_name = index_name
+        self._indexer_client = SearchIndexerClient(
+            endpoint=AISearchSettings.get_endpoint(),
+            credential=credential,
+        )
 
     def get_client(self) -> SearchIndexClient:
-        """
-        Retrieve the configured SearchIndexClient instance.
+        """Return the SearchIndexClient for index management operations."""
+        return self._client
 
-        Returns:
-            SearchIndexClient: The Azure Search Index client.
-        """
-        return self._client_index
+    def get_indexer_client(self) -> SearchIndexerClient:
+        """Return the SearchIndexerClient for indexer management operations."""
+        return self._indexer_client
 
     def get_index_name(self) -> str:
-        """
-        Retrieve the configured search index name.
-
-        Returns:
-            str: The name of the search index.
-        """
-        return self._index_name
+        """Return the default index name from settings."""
+        return AISearchSettings.get_index_name()

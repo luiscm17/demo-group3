@@ -1,22 +1,39 @@
-"""Entry point for DocSimplify CLI.
+"""FastAPI entrypoint for Brilliant Minds AI backend.
 
-Demonstrates usage of the TeacherAgent to answer questions
-about complex concepts in a simplified way.
+Registers all routers under /api/v1 and configures CORS and middleware.
 """
 
-import asyncio
-from src.agents.teacher_agent import teacher_agent
+from fastapi import FastAPI, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
+from typing import List
+from src.config.settings import CORS_ORIGINS
+
+from src.api.v1.routers import auth, documents, chats
+
+app = FastAPI(
+    title="Brilliant Minds AI",
+    description="AI backend to simplify documents for people with dyslexia and ADHD.",
+    version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
+)
+
+api_router = APIRouter(prefix="/api/v1", tags=["v1"])
+for router in (
+    auth.router,
+    documents.router,
+    chats.router,
+):
+    api_router.include_router(router)
+app.include_router(api_router)
 
 
-async def main():
-    teacher = await teacher_agent()
-
-    question = "What approach does the Artificial Neural Network Model for Prediction of Drilling Rate use to estimate drilling speed?"
-    response = await teacher.run(question)
-
-    print("User:", question)
-    print("TeacherAgent:", response)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "Brilliant Minds AI"}
