@@ -1,3 +1,5 @@
+![Brilliant Minds Logo](docs/img/brilliant-minds-logo.png)
+
 # Brilliant Minds
 
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
@@ -5,7 +7,16 @@
 ![Node.js](https://img.shields.io/badge/node.js-18+-green)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**Brilliant Minds** is an AI-powered assistant designed to simplify documents and reduce cognitive load for people with dyslexia and ADHD. It combines cutting-edge natural language processing with intuitive UI/UX to make content more accessible and easier to understand.
+**Brilliant Minds** is an AI-powered assistant designed to simplify documents and reduce cognitive load for neurodiverse learners
+(ADHD, Autism, Dyslexia). It combines cutting-edge natural language processing with intuitive UI/UX to make content more accessible and easier to understand.
+
+At its core, **Brilliant Minds** integrates intelligent agents such as cognitive profiling, task decomposition, learning support,
+and explainability modules to create a responsive and inclusive learning environment. The platform is particularly focused
+on supporting neurodiverse learners by optimizing cognitive load, simplifying complex content, and adapting instructional
+strategies to individual needs.
+
+By combining advances in artificial intelligence, learning analytics, and pedagogical design,
+ Brilliant Minds aims to foster deeper understanding, improve academic performance, and empower both students and educators through transparent, explainable, and human-centered AI systems.
 
 ## ✨ Features
 
