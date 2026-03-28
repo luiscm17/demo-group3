@@ -1,4 +1,4 @@
-"""JWT authentication utilities for DocSimplify."""
+"""JWT authentication utilities for Brilliant Minds."""
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional

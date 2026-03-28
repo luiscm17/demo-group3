@@ -25,10 +25,10 @@ class ProcessingTriggerPayload:
 def _build_headers() -> dict[str, str]:
     headers = {
         "Content-Type": "application/json",
-        "User-Agent": "docsimplify-processing-trigger/1.0",
+        "User-Agent": "brilliant-minds-processing-trigger/1.0",
     }
     if ProcessingTriggerSettings.SHARED_SECRET:
-        headers["x-docsimplify-processing-secret"] = (
+        headers["x-brilliant-minds-processing-secret"] = (
             ProcessingTriggerSettings.SHARED_SECRET
         )
     return headers

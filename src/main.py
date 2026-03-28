@@ -1,4 +1,4 @@
-"""FastAPI entrypoint for DocSimplify AI backend.
+"""FastAPI entrypoint for Brilliant Minds AI backend.
 
 Registers all routers under /api/v1 and configures CORS and middleware.
 """
@@ -11,7 +11,7 @@ from src.config.settings import CORS_ORIGINS
 from src.api.v1.routers import auth, documents, chats
 
 app = FastAPI(
-    title="DocSimplify AI",
+    title="Brilliant Minds AI",
     description="AI backend to simplify documents for people with dyslexia and ADHD.",
     version="1.0.0",
 )
@@ -36,4 +36,4 @@ app.include_router(api_router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "DocSimplify AI"}
+    return {"status": "ok", "service": "Brilliant Minds AI"}

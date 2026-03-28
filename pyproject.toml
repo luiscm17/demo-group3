@@ -1,5 +1,5 @@
 [project]
-name = "docsimplify"
+name = "brilliant-minds"
 version = "0.1.0"
 description = "AI assistant to simplify documents for people with dyslexia and ADHD"
 readme = "README.md"
