@@ -183,90 +183,6 @@ Swagger: `http://localhost:8001/docs`
 
 ### Frontend (`Next.js 16 + React + Tailwind CSS`)
 
-<<<<<<< HEAD
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend: `http://localhost:3000`
-
-## Modos del frontend
-
-### Demo local con mocks
-
-Es el modo por defecto. Sirve para revisar el flujo visual completo sin depender del backend ni de Azure.
-
-```bash
-cd frontend
-npm run dev
-```
-
-### Frontend conectado al backend real
-
-Crea `frontend/.env.local` con:
-
-```bash
-NEXT_PUBLIC_USE_MOCK_API=false
-NEXT_PUBLIC_API_URL=http://localhost:8001/api/v1
-```
-
-Luego levanta backend y frontend en paralelo.
-
-## Variables de entorno del backend
-
-Copia `.env.example` a `.env` y completa al menos:
-
-- `JWT_SECRET_KEY`
-- `COSMOS_ENDPOINT`
-- `COSMOS_KEY`
-- `AZURE_STORAGE_CONNECTION_STRING`
-- `AZURE_SEARCH_ENDPOINT`
-- `AZURE_SEARCH_KEY`
-- `OPENAI_ENDPOINT`
-- `OPENAI_API_KEY`
-- `AI_MODEL_DEPLOYMENT_NAME`
-- `DOCUMENT_INTELLIGENCE_ENDPOINT`
-- `DOCUMENT_INTELLIGENCE_KEY`
-
-Notas:
-
-- Sin `COSMOS_*` no funcionarán registro, login, perfil, documentos ni chats reales.
-- Sin `AZURE_STORAGE_CONNECTION_STRING` la subida de archivos no podrá usar Blob Storage.
-- Sin `AZURE_SEARCH_*` el grounding de RAG no tendrá índice real.
-- Sin `DOCUMENT_INTELLIGENCE_*` solo habrá fallback básico para texto plano.
-
-## Arquitectura
-
-### Frontend
-
-- `Next.js + React + Tailwind CSS`
-- Landing, login, onboarding, dashboard, documentos y chat
-
-### Backend
-
-- `FastAPI` sobre Python 3.13
-- Endpoints en `/api/v1/auth`, `/api/v1/users`, `/api/v1/documents`, `/api/v1/chats`
-- Pipeline de simplificación y grounding con servicios Azure
-
-## Estructura
-
-```text
-demo-group3/
-|-- src/
-|   |-- agents/
-|   |-- api/
-|   |-- config/
-|   |-- models/
-|   `-- services/
-|-- frontend/
-`-- infra/
-```
-
-=======
-
 - **App Router** for modern navigation and layouts
 - **Server Components** by default with selective `"use client"` boundaries
 - **Pages**:
@@ -345,28 +261,6 @@ brilliant-minds/
 └── README.md                     # This file
 ```
 
-## 🧪 Testing
-
-### Backend Tests
-
-Run the full test suite:
-
-```bash
-py -3.13 -m pytest
-```
-
-Run a specific test file:
-
-```bash
-py -3.13 -m pytest tests/test_auth_service.py -vv
-```
-
-Run tests matching a pattern:
-
-```bash
-py -3.13 -m pytest -k "login" -vv
-```
-
 ### Frontend Linting
 
 Lint TypeScript and React code:
@@ -411,7 +305,7 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 
 ## 👥 Authors & Acknowledgments
 
-**Brilliant Minds** is built with ❤️ by Gentleman Programming and the developer community.
+**Brilliant Minds** is built with ❤️ by brilliant-minds and the developer community.
 
 - **Design Philosophy**: Accessibility-first, neuro-inclusive UX
 - **Tech Stack**: Next.js, FastAPI, Azure Cognitive Services, Bicep
@@ -429,4 +323,3 @@ For questions, issues, or feature requests:
 ---
 
 **Made with accessibility in mind. Brilliant Minds for brilliant people.** 🚀
->>>>>>> b959371 (docs: update README Brilliant Minds)
