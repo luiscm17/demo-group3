@@ -2,6 +2,8 @@
 
 # Brilliant Minds
 
+*Learn Your Way. Thrive Your Way*
+
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
 ![Python](https://img.shields.io/badge/python-3.13-blue)
 ![Node.js](https://img.shields.io/badge/node.js-18+-green)
